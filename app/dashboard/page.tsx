@@ -17,29 +17,27 @@ import {
 
 interface DashboardStats {
   success: boolean;
-  data: {
-    clients: { total: number; active: number };
-    equipment: { total: number; active: number };
-    inspection_requests: {
-      PENDING: number;
-      IN_PROGRESS: number;
-      COMPLETED: number;
-      CANCELLED: number;
-      total: number;
-    };
-    work_orders: {
-      PENDING: number;
-      IN_PROGRESS: number;
-      COMPLETED: number;
-      CANCELLED: number;
-      total: number;
-    };
-    pending_orders_by_priority: {
-      LOW: number;
-      MEDIUM: number;
-      HIGH: number;
-      URGENT: number;
-    };
+  clients: { total: number; active: number };
+  equipment: { total: number; active: number };
+  inspection_requests: {
+    PENDING: number;
+    IN_PROGRESS: number;
+    COMPLETED: number;
+    CANCELLED: number;
+    total: number;
+  };
+  work_orders: {
+    PENDING: number;
+    IN_PROGRESS: number;
+    COMPLETED: number;
+    CANCELLED: number;
+    total: number;
+  };
+  pending_orders_by_priority: {
+    LOW: number;
+    MEDIUM: number;
+    HIGH: number;
+    URGENT: number;
   };
 }
 
@@ -69,7 +67,7 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
-  const statsData = stats?.data;
+  const statsData = stats;
 
   return (
     <div className="min-h-screen bg-gray-50">
