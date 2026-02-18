@@ -21,6 +21,33 @@ class ApiClient {
       }
       return config;
     });
+
+    // Backend echoes request body before JSON response (e.g. "{req}{res}").
+    // Parse past the echoed first JSON object to extract the actual response.
+    const parseData = (data: unknown) => {
+      if (typeof data !== 'string') return data;
+      const str = data.trim();
+      try { return JSON.parse(str); } catch { /* not simple JSON */ }
+      let depth = 0;
+      for (let i = 0; i < str.length; i++) {
+        if (str[i] === '{') depth++;
+        else if (str[i] === '}') {
+          depth--;
+          if (depth === 0 && i + 1 < str.length) {
+            try { return JSON.parse(str.slice(i + 1)); } catch { /* continue */ }
+          }
+        }
+      }
+      return data;
+    };
+
+    this.client.interceptors.response.use(
+      (response) => { response.data = parseData(response.data); return response; },
+      (error) => {
+        if (error.response) { error.response.data = parseData(error.response.data); }
+        return Promise.reject(error);
+      }
+    );
   }
 
   async get<T>(url: string, config?: AxiosRequestConfig) {
