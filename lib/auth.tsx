@@ -38,8 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await api.post<{ token: string; user: User }>('/auth/login', { email, password });
-    const { token, user } = response;
+    const response = await api.post<{ success: boolean; data: { token: string; user: User }; message: string }>('/auth/login', { email, password });
+    const { token, user } = response.data;
     
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -48,7 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/dashboard');
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Continue logout even if API call fails
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);
