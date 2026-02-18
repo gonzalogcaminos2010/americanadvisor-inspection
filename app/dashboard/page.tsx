@@ -69,7 +69,7 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
-  const statsData = stats?.data?.data;
+  const statsData = stats?.data;
 
   return (
     <div className="min-h-screen bg-gray-50">
