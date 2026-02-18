@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { WorkOrder, WorkOrderFormData, ApiResponse, User } from '@/types';
 import { useCrud } from '@/hooks/use-crud';
@@ -11,7 +11,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/shared/data-table';
 import { SearchBar } from '@/components/shared/search-bar';
 import { PageHeader } from '@/components/shared/page-header';
-import { Select } from '@/components/ui/select';
 import { getWorkOrderColumns } from './_components/work-order-columns';
 import { WorkOrderForm } from './_components/work-order-form';
 
@@ -124,17 +123,17 @@ export default function WorkOrdersPage() {
     });
   };
 
-  const handleStart = (id: number) => {
+  const handleStart = useCallback((id: number) => {
     startMutation.mutate(id);
-  };
+  }, [startMutation]);
 
-  const handleComplete = (id: number) => {
+  const handleComplete = useCallback((id: number) => {
     completeMutation.mutate(id);
-  };
+  }, [completeMutation]);
 
   const columns = useMemo(
     () => getWorkOrderColumns(handleOpenEdit, handleOpenDelete, handleStart, handleComplete),
-    []
+    [handleStart, handleComplete]
   );
 
   const users = usersResponse?.data ?? [];

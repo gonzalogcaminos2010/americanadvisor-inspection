@@ -163,7 +163,7 @@ export default function InspectionRequestsPage() {
       <div className="mt-6">
         <DataTable
           columns={columns}
-          data={(listData?.data ?? []) as unknown as Record<string, unknown>[]}
+          data={listData?.data ?? []}
           isLoading={isLoading}
           pagination={listData?.meta}
           onPageChange={setPage}

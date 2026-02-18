@@ -3,6 +3,7 @@
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import {
   Users,
   Wrench,
@@ -10,7 +11,8 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  XCircle
+  XCircle,
+  Plus,
 } from 'lucide-react';
 
 interface StatsData {
@@ -46,6 +48,7 @@ interface ApiResponse {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
 
   const { data: stats, isLoading: statsLoading } = useQuery<ApiResponse>({
     queryKey: ['dashboard-stats'],
@@ -79,6 +82,7 @@ export default function DashboardPage() {
               subtitle={`${statsData.clients.active} activos`}
               icon={<Users className="h-6 w-6 text-blue-600" />}
               color="blue"
+              onClick={() => router.push('/clients')}
             />
             <StatCard
               title="Equipos"
@@ -86,6 +90,7 @@ export default function DashboardPage() {
               subtitle={`${statsData.equipment.active} activos`}
               icon={<Wrench className="h-6 w-6 text-green-600" />}
               color="green"
+              onClick={() => router.push('/equipment')}
             />
             <StatCard
               title="Solicitudes"
@@ -93,6 +98,7 @@ export default function DashboardPage() {
               subtitle={`${statsData.inspection_requests.PENDING} pendientes`}
               icon={<ClipboardList className="h-6 w-6 text-purple-600" />}
               color="purple"
+              onClick={() => router.push('/inspection-requests')}
             />
             <StatCard
               title="Ordenes de Trabajo"
@@ -100,7 +106,25 @@ export default function DashboardPage() {
               subtitle={`${statsData.work_orders.PENDING} pendientes`}
               icon={<CheckCircle className="h-6 w-6 text-orange-600" />}
               color="orange"
+              onClick={() => router.push('/work-orders')}
             />
+          </div>
+
+          <div className="flex gap-3 mb-8">
+            <button
+              onClick={() => router.push('/inspection-requests')}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Nueva Solicitud
+            </button>
+            <button
+              onClick={() => router.push('/work-orders')}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Nueva Orden
+            </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -175,13 +199,15 @@ function StatCard({
   value,
   subtitle,
   icon,
-  color
+  color,
+  onClick,
 }: {
   title: string;
   value: number;
   subtitle: string;
   icon: React.ReactNode;
   color: string;
+  onClick?: () => void;
 }) {
   const colorClasses: Record<string, string> = {
     blue: 'bg-blue-50',
@@ -191,7 +217,10 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div
+      className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
+      onClick={onClick}
+    >
       <div className="flex items-center">
         <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
           {icon}

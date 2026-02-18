@@ -16,7 +16,8 @@ interface DataTableProps<T> {
   onPageChange?: (page: number) => void;
 }
 
-export function DataTable<T extends Record<string, unknown>>({ columns, data, isLoading, pagination, onPageChange }: DataTableProps<T>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataTable<T extends Record<string, any>>({ columns, data, isLoading, pagination, onPageChange }: DataTableProps<T>) {
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow overflow-hidden">

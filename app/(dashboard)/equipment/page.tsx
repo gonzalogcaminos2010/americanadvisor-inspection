@@ -126,7 +126,7 @@ export default function EquipmentPage() {
 
       <DataTable
         columns={columns}
-        data={(data?.data || []) as unknown as Record<string, unknown>[]}
+        data={data?.data ?? []}
         isLoading={isLoading}
         pagination={data?.meta}
         onPageChange={setPage}
