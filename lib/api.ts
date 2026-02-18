@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://167.71.125.132/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 class ApiClient {
   private client: AxiosInstance;
