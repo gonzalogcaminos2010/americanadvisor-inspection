@@ -2,13 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../lib/auth';
-import { api } from '../../lib/api';
+import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  Users, 
-  Wrench, 
-  ClipboardList, 
+import {
+  Users,
+  Wrench,
+  ClipboardList,
   CheckCircle,
   AlertCircle,
   Clock,
@@ -135,27 +135,27 @@ export default function DashboardPage() {
                   Solicitudes de Inspección
                 </h3>
                 <div className="space-y-3">
-                  <StatusItem 
-                    label="Pendientes" 
-                    value={statsData.inspection_requests.PENDING} 
+                  <StatusItem
+                    label="Pendientes"
+                    value={statsData.inspection_requests.PENDING}
                     icon={<Clock className="h-4 w-4" />}
                     color="yellow"
                   />
-                  <StatusItem 
-                    label="En Progreso" 
-                    value={statsData.inspection_requests.IN_PROGRESS} 
+                  <StatusItem
+                    label="En Progreso"
+                    value={statsData.inspection_requests.IN_PROGRESS}
                     icon={<AlertCircle className="h-4 w-4" />}
                     color="blue"
                   />
-                  <StatusItem 
-                    label="Completadas" 
-                    value={statsData.inspection_requests.COMPLETED} 
+                  <StatusItem
+                    label="Completadas"
+                    value={statsData.inspection_requests.COMPLETED}
                     icon={<CheckCircle className="h-4 w-4" />}
                     color="green"
                   />
-                  <StatusItem 
-                    label="Canceladas" 
-                    value={statsData.inspection_requests.CANCELLED} 
+                  <StatusItem
+                    label="Canceladas"
+                    value={statsData.inspection_requests.CANCELLED}
                     icon={<XCircle className="h-4 w-4" />}
                     color="red"
                   />
@@ -167,24 +167,24 @@ export default function DashboardPage() {
                   Órdenes de Trabajo Pendientes por Prioridad
                 </h3>
                 <div className="space-y-3">
-                  <PriorityItem 
-                    label="Urgente" 
-                    value={statsData.pending_orders_by_priority.URGENT} 
+                  <PriorityItem
+                    label="Urgente"
+                    value={statsData.pending_orders_by_priority.URGENT}
                     color="red"
                   />
-                  <PriorityItem 
-                    label="Alta" 
-                    value={statsData.pending_orders_by_priority.HIGH} 
+                  <PriorityItem
+                    label="Alta"
+                    value={statsData.pending_orders_by_priority.HIGH}
                     color="orange"
                   />
-                  <PriorityItem 
-                    label="Media" 
-                    value={statsData.pending_orders_by_priority.MEDIUM} 
+                  <PriorityItem
+                    label="Media"
+                    value={statsData.pending_orders_by_priority.MEDIUM}
                     color="yellow"
                   />
-                  <PriorityItem 
-                    label="Baja" 
-                    value={statsData.pending_orders_by_priority.LOW} 
+                  <PriorityItem
+                    label="Baja"
+                    value={statsData.pending_orders_by_priority.LOW}
                     color="gray"
                   />
                 </div>
@@ -197,17 +197,17 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ 
-  title, 
-  value, 
-  subtitle, 
-  icon, 
-  color 
-}: { 
-  title: string; 
-  value: number; 
-  subtitle: string; 
-  icon: React.ReactNode; 
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon,
+  color
+}: {
+  title: string;
+  value: number;
+  subtitle: string;
+  icon: React.ReactNode;
   color: string;
 }) {
   const colorClasses: Record<string, string> = {
@@ -233,15 +233,15 @@ function StatCard({
   );
 }
 
-function StatusItem({ 
-  label, 
-  value, 
-  icon, 
-  color 
-}: { 
-  label: string; 
-  value: number; 
-  icon: React.ReactNode; 
+function StatusItem({
+  label,
+  value,
+  icon,
+  color
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
   color: string;
 }) {
   const colorClasses: Record<string, string> = {
@@ -264,13 +264,13 @@ function StatusItem({
   );
 }
 
-function PriorityItem({ 
-  label, 
-  value, 
-  color 
-}: { 
-  label: string; 
-  value: number; 
+function PriorityItem({
+  label,
+  value,
+  color
+}: {
+  label: string;
+  value: number;
   color: string;
 }) {
   const colorClasses: Record<string, string> = {
