@@ -15,8 +15,7 @@ import {
   XCircle
 } from 'lucide-react';
 
-interface DashboardStats {
-  success: boolean;
+interface StatsData {
   clients: { total: number; active: number };
   equipment: { total: number; active: number };
   inspection_requests: {
@@ -41,6 +40,12 @@ interface DashboardStats {
   };
 }
 
+interface ApiResponse {
+  success: boolean;
+  data: StatsData;
+  message: string;
+}
+
 export default function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -51,7 +56,7 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
+  const { data: stats, isLoading: statsLoading } = useQuery<ApiResponse>({
     queryKey: ['dashboard-stats'],
     queryFn: () => api.get('/dashboard/stats'),
     enabled: !!user,
@@ -67,7 +72,7 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
-  const statsData = stats;
+  const statsData = stats?.data;
 
   return (
     <div className="min-h-screen bg-gray-50">
