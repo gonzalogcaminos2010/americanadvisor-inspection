@@ -13,6 +13,7 @@ import {
   Clock,
   XCircle,
   Plus,
+  ClipboardCheck,
 } from 'lucide-react';
 
 interface StatsData {
@@ -124,6 +125,20 @@ export default function DashboardPage() {
             >
               <Plus className="h-4 w-4" />
               Nueva Orden
+            </button>
+            <button
+              onClick={() => router.push('/templates/builder')}
+              className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Nueva Plantilla
+            </button>
+            <button
+              onClick={() => router.push('/inspections')}
+              className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              Ver Inspecciones
             </button>
           </div>
 

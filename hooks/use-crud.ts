@@ -67,9 +67,20 @@ export function useCrud<TEntity, TFormData>({ endpoint, queryKey }: UseCrudOptio
 }
 
 // Pre-configured hooks for each entity
-import { Client, ClientFormData, Equipment, EquipmentFormData, InspectionRequest, InspectionRequestFormData, WorkOrder, WorkOrderFormData } from '@/types';
+import {
+  Client, ClientFormData,
+  Equipment, EquipmentFormData,
+  InspectionRequest, InspectionRequestFormData,
+  WorkOrder, WorkOrderFormData,
+  InspectionTemplate, InspectionTemplateFormData,
+  Inspection, InspectionFormData,
+  Finding, FindingFormData,
+} from '@/types';
 
 export const clientsCrud = () => useCrud<Client, ClientFormData>({ endpoint: '/clients', queryKey: 'clients' });
 export const equipmentCrud = () => useCrud<Equipment, EquipmentFormData>({ endpoint: '/equipment', queryKey: 'equipment' });
 export const inspectionRequestsCrud = () => useCrud<InspectionRequest, InspectionRequestFormData>({ endpoint: '/inspection-requests', queryKey: 'inspection-requests' });
 export const workOrdersCrud = () => useCrud<WorkOrder, WorkOrderFormData>({ endpoint: '/work-orders', queryKey: 'work-orders' });
+export const inspectionTemplatesCrud = () => useCrud<InspectionTemplate, InspectionTemplateFormData>({ endpoint: '/inspection-templates', queryKey: 'inspection-templates' });
+export const inspectionsCrud = () => useCrud<Inspection, InspectionFormData>({ endpoint: '/inspections', queryKey: 'inspections' });
+export const findingsCrud = () => useCrud<Finding, FindingFormData>({ endpoint: '/findings', queryKey: 'findings' });
