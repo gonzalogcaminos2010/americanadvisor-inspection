@@ -14,7 +14,11 @@ import { Button } from '@/components/ui/button';
 const workOrderSchema = z.object({
   inspection_request_id: z.coerce.number().min(1, 'La solicitud es requerida'),
   equipment_id: z.coerce.number().min(1, 'El equipo es requerido'),
-  assigned_to: z.coerce.number().optional().or(z.literal('')).transform((val) => (val === '' || val === 0 ? undefined : val)),
+  assigned_to: z.coerce
+    .number()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' || val === 0 ? undefined : val)),
   priority: z.string().min(1, 'La prioridad es requerida'),
   scheduled_date: z.string().optional(),
   notes: z.string().optional(),
@@ -24,6 +28,20 @@ interface WorkOrderFormProps {
   initialData?: WorkOrder;
   onSubmit: (data: WorkOrderFormData) => void;
   isLoading: boolean;
+}
+
+// Helper to get equipment display name from whatever fields are available
+function getEquipmentLabel(e: Equipment): string {
+  const name = e.name || e.equipment_code || e.model || e.brand || `Equipo #${e.id}`;
+  const detail = e.serial_number || e.model || '';
+  return detail ? `${name} - ${detail}` : name;
+}
+
+// Helper to get request display label
+function getRequestLabel(r: InspectionRequest): string {
+  const number = r.request_number || `SOL-${r.id}`;
+  const client = r.client?.name || 'Sin cliente';
+  return `${number} - ${client}`;
 }
 
 export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFormProps) {
@@ -56,7 +74,8 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
 
   const { data: requestsResponse } = useQuery({
     queryKey: ['inspection-requests-list'],
-    queryFn: () => api.get<PaginatedResponse<InspectionRequest>>('/inspection-requests?per_page=100'),
+    queryFn: () =>
+      api.get<PaginatedResponse<InspectionRequest>>('/inspection-requests?per_page=100'),
   });
 
   const { data: usersResponse } = useQuery({
@@ -78,11 +97,13 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
         `/inspection-requests/${inspectionRequestId}/available-equipment`
       )
       .then((res) => {
-        if (!cancelled) {
-          setEquipmentList(res.data);
-          if (!initialData) {
-            setValue('equipment_id', 0 as unknown as number);
-          }
+        if (cancelled) return;
+        // Handle both response formats: { data: [...] } or just [...]
+        const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+        setEquipmentList(list);
+        // Reset equipment selection when changing request (only for new orders)
+        if (!initialData) {
+          setValue('equipment_id', '' as unknown as number);
         }
       })
       .catch(() => {
@@ -98,7 +119,12 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
   }, [inspectionRequestId, setValue, initialData]);
 
   const inspectionRequests = requestsResponse?.data ?? [];
-  const users = usersResponse?.data ?? [];
+  // Handle both { data: [...] } and [...] for users
+  const users = Array.isArray(usersResponse)
+    ? usersResponse
+    : Array.isArray(usersResponse?.data)
+      ? usersResponse.data
+      : [];
 
   const priorityOptions = [
     { value: 'LOW', label: 'Baja' },
@@ -111,23 +137,29 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select
-          label="Solicitud de Inspecci\u00F3n *"
+          label="Solicitud de Inspección *"
           error={errors.inspection_request_id?.message}
           placeholder="Seleccionar solicitud"
           options={inspectionRequests.map((r) => ({
             value: String(r.id),
-            label: `${r.request_number} - ${r.client?.name ?? 'Sin cliente'}`,
+            label: getRequestLabel(r),
           }))}
           {...register('inspection_request_id')}
         />
         <Select
           label="Equipo *"
           error={errors.equipment_id?.message}
-          placeholder={loadingEquipment ? 'Cargando equipos...' : 'Seleccionar equipo'}
+          placeholder={
+            loadingEquipment
+              ? 'Cargando equipos...'
+              : !inspectionRequestId
+                ? 'Primero seleccione una solicitud'
+                : 'Seleccionar equipo'
+          }
           disabled={!inspectionRequestId || loadingEquipment}
           options={equipmentList.map((e) => ({
             value: String(e.id),
-            label: `${e.name} - ${e.serial_number}`,
+            label: getEquipmentLabel(e),
           }))}
           {...register('equipment_id')}
         />
@@ -142,7 +174,7 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
           label="Inspector"
           error={errors.assigned_to?.message}
           placeholder="Sin asignar"
-          options={users.map((u) => ({
+          options={users.map((u: User) => ({
             value: String(u.id),
             label: u.name,
           }))}
