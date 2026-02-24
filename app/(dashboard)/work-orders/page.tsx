@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { WorkOrder, WorkOrderFormData, ApiResponse, User } from '@/types';
 import { useCrud } from '@/hooks/use-crud';
 import { useToast } from '@/components/ui/toast';
@@ -23,8 +24,8 @@ export default function WorkOrdersPage() {
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
   const [deletingOrder, setDeletingOrder] = useState<WorkOrder | null>(null);
 
+  const router = useRouter();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { useList, useCreate, useUpdate, useDelete } = useCrud<WorkOrder, WorkOrderFormData>({
     endpoint: '/work-orders',
     queryKey: 'work-orders',
@@ -44,24 +45,6 @@ export default function WorkOrdersPage() {
   const { data: usersResponse } = useQuery({
     queryKey: ['users-list'],
     queryFn: () => api.get<ApiResponse<User[]>>('/users'),
-  });
-
-  const startMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/work-orders/${id}/start`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
-      toast.success('Orden iniciada');
-    },
-    onError: () => toast.error('Error al iniciar la orden'),
-  });
-
-  const completeMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/work-orders/${id}/complete`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
-      toast.success('Orden completada');
-    },
-    onError: () => toast.error('Error al completar la orden'),
   });
 
   const handleOpenCreate = () => {
@@ -123,17 +106,14 @@ export default function WorkOrdersPage() {
     });
   };
 
-  const handleStart = useCallback((id: number) => {
-    startMutation.mutate(id);
-  }, [startMutation]);
-
-  const handleComplete = useCallback((id: number) => {
-    completeMutation.mutate(id);
-  }, [completeMutation]);
+  const handleView = useCallback((order: WorkOrder) => {
+    router.push(`/work-orders/${order.id}`);
+  }, [router]);
 
   const columns = useMemo(
-    () => getWorkOrderColumns(handleOpenEdit, handleOpenDelete, handleStart, handleComplete),
-    [handleStart, handleComplete]
+    () => getWorkOrderColumns(handleOpenEdit, handleOpenDelete, handleView),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [handleView]
   );
 
   const users = usersResponse?.data ?? [];

@@ -4,13 +4,12 @@ import { WorkOrder } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Column } from '@/components/shared/data-table';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Eye } from 'lucide-react';
 
 export function getWorkOrderColumns(
   onEdit: (order: WorkOrder) => void,
   onDelete: (order: WorkOrder) => void,
-  onStart: (id: number) => void,
-  onComplete: (id: number) => void
+  onView: (order: WorkOrder) => void
 ): Column<WorkOrder>[] {
   return [
     { key: 'order_number', header: 'N\u00B0 Orden' },
@@ -52,16 +51,14 @@ export function getWorkOrderColumns(
       header: 'Acciones',
       render: (order: WorkOrder) => (
         <div className="flex gap-2">
-          {order.status === 'PENDING' && (
-            <Button variant="primary" size="sm" onClick={() => onStart(order.id)}>
-              Iniciar
-            </Button>
-          )}
-          {order.status === 'IN_PROGRESS' && (
-            <Button variant="primary" size="sm" onClick={() => onComplete(order.id)}>
-              Completar
-            </Button>
-          )}
+          <Button variant="primary" size="sm" onClick={() => onView(order)}>
+            <Eye className="h-4 w-4 mr-1" />
+            {order.status === 'PENDING'
+              ? 'Iniciar'
+              : order.status === 'IN_PROGRESS'
+                ? 'Inspeccionar'
+                : 'Ver'}
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => onEdit(order)}>
             <Pencil className="h-4 w-4" />
           </Button>

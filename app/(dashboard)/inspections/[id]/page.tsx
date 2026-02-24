@@ -18,6 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { InspectionExecutor } from '@/components/inspection/inspection-executor';
 import { ArrowLeft, FileText, AlertTriangle, Camera, MapPin } from 'lucide-react';
 
 type Tab = 'respuestas' | 'hallazgos' | 'fotos';
@@ -115,19 +116,10 @@ export default function InspectionDetailPage() {
         </div>
       )}
 
-      {/* Active inspection: show executor placeholder */}
+      {/* Active inspection: show executor */}
       {isActive && (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Inspeccion en curso</h2>
-          <p className="text-gray-500 mb-4">
-            {inspection.status === InspectionStatus.NOT_STARTED
-              ? 'Esta inspeccion aun no ha sido iniciada.'
-              : 'Esta inspeccion esta en progreso.'}
-          </p>
-          <p className="text-sm text-gray-400">
-            El componente de ejecucion de inspecciones se cargara cuando este disponible.
-          </p>
+        <div className="bg-white rounded-lg shadow overflow-hidden" style={{ minHeight: '60vh' }}>
+          <InspectionExecutor inspectionId={inspection.id} />
         </div>
       )}
 
