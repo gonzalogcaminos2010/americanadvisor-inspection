@@ -66,7 +66,7 @@ export function RequestForm({ initialData, onSubmit, isLoading }: RequestFormPro
       due_date: initialData?.due_date?.split('T')[0] ?? '',
       priority: initialData?.priority ?? '',
       amount: initialData?.amount ?? undefined,
-      currency: initialData?.currency ?? 'USD',
+      currency: initialData?.currency ?? 'ARS',
       description: initialData?.description ?? '',
       notes: initialData?.notes ?? '',
     },
@@ -112,8 +112,8 @@ export function RequestForm({ initialData, onSubmit, isLoading }: RequestFormPro
     { value: 'URGENT', label: 'Urgente' },
   ];
   const currencyOptions = [
-    { value: 'USD', label: 'USD' },
-    { value: 'MXN', label: 'MXN' },
+    { value: 'ARS', label: 'ARS (Peso Argentino)' },
+    { value: 'USD', label: 'USD (Dólar)' },
   ];
 
   return (
