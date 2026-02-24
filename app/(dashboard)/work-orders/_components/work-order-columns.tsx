@@ -49,24 +49,31 @@ export function getWorkOrderColumns(
     {
       key: 'actions',
       header: 'Acciones',
-      render: (order: WorkOrder) => (
-        <div className="flex gap-2">
-          <Button variant="primary" size="sm" onClick={() => onView(order)}>
-            <Eye className="h-4 w-4 mr-1" />
-            {order.status === 'PENDING'
-              ? 'Iniciar'
-              : order.status === 'IN_PROGRESS'
-                ? 'Inspeccionar'
-                : 'Ver'}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => onEdit(order)}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => onDelete(order)}>
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </Button>
-        </div>
-      ),
+      render: (order: WorkOrder) => {
+        const canModify = order.status === 'PENDING' || order.status === 'IN_PROGRESS';
+        return (
+          <div className="flex gap-2">
+            <Button variant="primary" size="sm" onClick={() => onView(order)}>
+              <Eye className="h-4 w-4 mr-1" />
+              {order.status === 'PENDING'
+                ? 'Iniciar'
+                : order.status === 'IN_PROGRESS'
+                  ? 'Inspeccionar'
+                  : 'Ver'}
+            </Button>
+            {canModify && (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => onEdit(order)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => onDelete(order)}>
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </>
+            )}
+          </div>
+        );
+      },
     },
   ];
 }

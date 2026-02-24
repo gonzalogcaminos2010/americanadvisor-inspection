@@ -100,8 +100,12 @@ export default function WorkOrdersPage() {
         toast.success('Orden eliminada exitosamente');
         setDeletingOrder(null);
       },
-      onError: (err) => {
-        toast.error(err.message || 'Error al procesar la solicitud');
+      onError: (err: unknown) => {
+        // Extract backend message from axios error
+        const axiosErr = err as { response?: { data?: { message?: string } } };
+        const msg = axiosErr?.response?.data?.message || (err as Error)?.message || 'Error al eliminar la orden';
+        toast.error(msg);
+        setDeletingOrder(null);
       },
     });
   };

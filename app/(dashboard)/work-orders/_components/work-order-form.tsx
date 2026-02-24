@@ -14,11 +14,7 @@ import { Button } from '@/components/ui/button';
 const workOrderSchema = z.object({
   inspection_request_id: z.coerce.number().min(1, 'La solicitud es requerida'),
   equipment_id: z.coerce.number().min(1, 'El equipo es requerido'),
-  assigned_to: z.coerce
-    .number()
-    .optional()
-    .or(z.literal(''))
-    .transform((val) => (val === '' || val === 0 ? undefined : val)),
+  assigned_to: z.coerce.number().min(1, 'El inspector es requerido'),
   priority: z.string().min(1, 'La prioridad es requerida'),
   scheduled_date: z.string().min(1, 'La fecha programada es requerida'),
   notes: z.string().optional(),
@@ -172,9 +168,9 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
           {...register('priority')}
         />
         <Select
-          label="Inspector"
+          label="Inspector *"
           error={errors.assigned_to?.message}
-          placeholder="Sin asignar"
+          placeholder="Seleccionar inspector"
           options={users.map((u: User) => ({
             value: String(u.id),
             label: u.name,
@@ -182,7 +178,7 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
           {...register('assigned_to')}
         />
         <Input
-          label="Fecha Programada"
+          label="Fecha Programada *"
           type="date"
           error={errors.scheduled_date?.message}
           {...register('scheduled_date')}
