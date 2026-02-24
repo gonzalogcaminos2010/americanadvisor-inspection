@@ -20,7 +20,7 @@ const workOrderSchema = z.object({
     .or(z.literal(''))
     .transform((val) => (val === '' || val === 0 ? undefined : val)),
   priority: z.string().min(1, 'La prioridad es requerida'),
-  scheduled_date: z.string().optional(),
+  scheduled_date: z.string().min(1, 'La fecha programada es requerida'),
   notes: z.string().optional(),
 });
 
@@ -67,6 +67,7 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
         }
       : {
           priority: 'MEDIUM',
+          scheduled_date: new Date().toISOString().split('T')[0],
         },
   });
 
