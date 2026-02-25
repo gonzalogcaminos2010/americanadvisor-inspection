@@ -58,6 +58,7 @@ export enum QuestionType {
 export enum InspectionStatus {
   NOT_STARTED = 'NOT_STARTED',
   IN_PROGRESS = 'IN_PROGRESS',
+  STANDBY = 'STANDBY',
   COMPLETED = 'COMPLETED',
   SUBMITTED = 'SUBMITTED',
 }
@@ -164,7 +165,7 @@ export interface WorkOrder {
   id: number;
   inspection_request_id: number;
   equipment_id: number;
-  assigned_to: number | null;
+  inspector_id: number | null;
   order_number: string;
   status: WorkOrderStatus;
   priority: string;
@@ -349,7 +350,7 @@ export interface InspectionRequestFormData {
 export interface WorkOrderFormData {
   inspection_request_id: number;
   equipment_id: number;
-  assigned_to?: number;
+  inspector_id?: number;
   template_id?: number;
   priority: string;
   scheduled_date?: string;

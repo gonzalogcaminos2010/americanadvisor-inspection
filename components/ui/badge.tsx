@@ -18,6 +18,7 @@ const colorMap: Record<string, string> = {
   URGENT: 'bg-red-100 text-red-800',
   // Inspection statuses
   NOT_STARTED: 'bg-gray-100 text-gray-800',
+  STANDBY: 'bg-amber-100 text-amber-800',
   SUBMITTED: 'bg-purple-100 text-purple-800',
   // Inspection results
   PASS: 'bg-green-100 text-green-800',
@@ -49,6 +50,7 @@ const labelMap: Record<string, string> = {
   URGENT: 'Urgente',
   // Inspection statuses
   NOT_STARTED: 'No Iniciada',
+  STANDBY: 'En Pausa',
   SUBMITTED: 'Enviada',
   // Inspection results
   PASS: 'Aprobado',

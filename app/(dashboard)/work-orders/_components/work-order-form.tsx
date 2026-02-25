@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
-import { WorkOrder, WorkOrderFormData, InspectionRequest, Equipment, User, PaginatedResponse, ApiResponse } from '@/types';
+import { WorkOrder, WorkOrderFormData, InspectionRequest, InspectionTemplate, Equipment, User, PaginatedResponse, ApiResponse } from '@/types';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -14,7 +14,12 @@ import { Button } from '@/components/ui/button';
 const workOrderSchema = z.object({
   inspection_request_id: z.coerce.number().min(1, 'La solicitud es requerida'),
   equipment_id: z.coerce.number().min(1, 'El equipo es requerido'),
-  assigned_to: z.coerce.number().min(1, 'El inspector es requerido'),
+  inspector_id: z.coerce.number().min(1, 'El inspector es requerido'),
+  template_id: z.coerce
+    .number()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' || val === 0 ? undefined : val)),
   priority: z.string().min(1, 'La prioridad es requerida'),
   scheduled_date: z.string().min(1, 'La fecha programada es requerida'),
   notes: z.string().optional(),
@@ -56,9 +61,10 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
       ? {
           inspection_request_id: initialData.inspection_request_id,
           equipment_id: initialData.equipment_id,
-          assigned_to: initialData.assigned_to ?? undefined,
+          inspector_id: initialData.inspector_id ?? undefined,
+          template_id: initialData.template_id ?? undefined,
           priority: initialData.priority,
-          scheduled_date: initialData.scheduled_date ?? '',
+          scheduled_date: initialData.scheduled_date?.split('T')[0] ?? '',
           notes: initialData.notes ?? '',
         }
       : {
@@ -80,6 +86,11 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
     queryFn: () => api.get<ApiResponse<User[]>>('/users'),
   });
 
+  const { data: templatesResponse } = useQuery({
+    queryKey: ['inspection-templates-active'],
+    queryFn: () => api.get<PaginatedResponse<InspectionTemplate>>('/inspection-templates?is_active=true&per_page=100'),
+  });
+
   useEffect(() => {
     if (!inspectionRequestId) {
       setEquipmentList([]);
@@ -95,10 +106,8 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
       )
       .then((res) => {
         if (cancelled) return;
-        // Handle both response formats: { data: [...] } or just [...]
         const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
         setEquipmentList(list);
-        // Reset equipment selection when changing request (only for new orders)
         if (!initialData) {
           setValue('equipment_id', '' as unknown as number);
         }
@@ -116,12 +125,12 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
   }, [inspectionRequestId, setValue, initialData]);
 
   const inspectionRequests = requestsResponse?.data ?? [];
-  // Handle both { data: [...] } and [...] for users
   const users = Array.isArray(usersResponse)
     ? usersResponse
     : Array.isArray(usersResponse?.data)
       ? usersResponse.data
       : [];
+  const templates = templatesResponse?.data ?? [];
 
   const priorityOptions = [
     { value: 'LOW', label: 'Baja' },
@@ -134,7 +143,7 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select
-          label="Solicitud de Inspección *"
+          label="Solicitud de Inspeccion *"
           error={errors.inspection_request_id?.message}
           placeholder="Seleccionar solicitud"
           options={inspectionRequests.map((r) => ({
@@ -161,21 +170,31 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
           {...register('equipment_id')}
         />
         <Select
-          label="Prioridad *"
-          error={errors.priority?.message}
-          placeholder="Seleccionar prioridad"
-          options={priorityOptions}
-          {...register('priority')}
-        />
-        <Select
           label="Inspector *"
-          error={errors.assigned_to?.message}
+          error={errors.inspector_id?.message}
           placeholder="Seleccionar inspector"
           options={users.map((u: User) => ({
             value: String(u.id),
             label: u.name,
           }))}
-          {...register('assigned_to')}
+          {...register('inspector_id')}
+        />
+        <Select
+          label="Plantilla"
+          error={errors.template_id?.message}
+          placeholder="Sin plantilla (seleccionar al inspeccionar)"
+          options={templates.map((t) => ({
+            value: String(t.id),
+            label: `${t.name} (${t.category})`,
+          }))}
+          {...register('template_id')}
+        />
+        <Select
+          label="Prioridad *"
+          error={errors.priority?.message}
+          placeholder="Seleccionar prioridad"
+          options={priorityOptions}
+          {...register('priority')}
         />
         <Input
           label="Fecha Programada *"

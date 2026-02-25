@@ -36,7 +36,7 @@ export default function WorkOrdersPage() {
     page,
     per_page: 15,
     status: statusFilter || undefined,
-    assigned_to: inspectorFilter || undefined,
+    inspector_id: inspectorFilter || undefined,
   });
   const createMutation = useCreate();
   const updateMutation = useUpdate();
