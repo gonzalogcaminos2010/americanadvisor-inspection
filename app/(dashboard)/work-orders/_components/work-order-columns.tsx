@@ -20,8 +20,15 @@ export function getWorkOrderColumns(
     },
     {
       key: 'equipment',
-      header: 'Equipo',
-      render: (order: WorkOrder) => order.equipment?.name ?? '-',
+      header: 'Equipos',
+      render: (order: WorkOrder) => {
+        if (order.items && order.items.length > 0) {
+          const names = order.items.map((i) => i.equipment?.name).filter(Boolean);
+          if (names.length <= 2) return names.join(', ') || `${order.items.length} equipo(s)`;
+          return `${names[0]} +${names.length - 1} mas`;
+        }
+        return order.equipment?.name ?? '-';
+      },
     },
     {
       key: 'inspector',

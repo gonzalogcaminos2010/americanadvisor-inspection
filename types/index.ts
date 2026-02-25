@@ -161,12 +161,35 @@ export interface InspectionRequest {
   service_type?: ServiceType;
 }
 
+export enum WorkOrderItemStatus {
+  PENDING = 'PENDING',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  SKIPPED = 'SKIPPED',
+}
+
+export interface WorkOrderItem {
+  id: number;
+  work_order_id: number;
+  equipment_id: number;
+  template_id: number | null;
+  inspector_id: number | null;
+  status: WorkOrderItemStatus;
+  sequence: number;
+  notes: string | null;
+  completed_at: string | null;
+  equipment?: Equipment;
+  template?: InspectionTemplate;
+  inspector?: User;
+}
+
 export interface WorkOrder {
   id: number;
   inspection_request_id: number;
   equipment_id: number;
   inspector_id: number | null;
   order_number: string;
+  code?: string;
   status: WorkOrderStatus;
   priority: string;
   scheduled_date: string | null;
@@ -181,6 +204,7 @@ export interface WorkOrder {
   inspector?: User;
   template_id?: number | null;
   template?: InspectionTemplate;
+  items?: WorkOrderItem[];
 }
 
 // === Inspection System Entities ===
@@ -347,14 +371,23 @@ export interface InspectionRequestFormData {
   notes?: string;
 }
 
+export interface WorkOrderItemFormData {
+  equipment_id: number;
+  template_id?: number;
+  inspector_id?: number;
+  notes?: string;
+}
+
 export interface WorkOrderFormData {
   inspection_request_id: number;
-  equipment_id: number;
+  scheduled_date?: string;
+  priority: string;
+  notes?: string;
+  items: WorkOrderItemFormData[];
+  // Legacy single-equipment fields (backward compat)
+  equipment_id?: number;
   inspector_id?: number;
   template_id?: number;
-  priority: string;
-  scheduled_date?: string;
-  notes?: string;
 }
 
 export interface InspectionTemplateFormData {

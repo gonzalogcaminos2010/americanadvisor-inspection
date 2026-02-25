@@ -1,29 +1,60 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState, useCallback } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
-import { WorkOrder, WorkOrderFormData, InspectionRequest, InspectionTemplate, Equipment, User, PaginatedResponse, ApiResponse } from '@/types';
+import {
+  WorkOrder,
+  WorkOrderFormData,
+  InspectionRequest,
+  InspectionTemplate,
+  Equipment,
+  User,
+  PaginatedResponse,
+  ApiResponse,
+} from '@/types';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Plus, Trash2 } from 'lucide-react';
 
-const workOrderSchema = z.object({
-  inspection_request_id: z.coerce.number().min(1, 'La solicitud es requerida'),
-  equipment_id: z.coerce.number().min(1, 'El equipo es requerido'),
-  inspector_id: z.coerce.number().min(1, 'El inspector es requerido'),
+const itemSchema = z.object({
+  equipment_id: z.coerce.number().min(1, 'Equipo requerido'),
   template_id: z.coerce
     .number()
     .optional()
     .or(z.literal(''))
     .transform((val) => (val === '' || val === 0 ? undefined : val)),
+  inspector_id: z.coerce
+    .number()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' || val === 0 ? undefined : val)),
+  notes: z.string().optional(),
+});
+
+const workOrderSchema = z.object({
+  inspection_request_id: z.coerce.number().min(1, 'La solicitud es requerida'),
   priority: z.string().min(1, 'La prioridad es requerida'),
   scheduled_date: z.string().min(1, 'La fecha programada es requerida'),
   notes: z.string().optional(),
+  default_inspector_id: z.coerce
+    .number()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' || val === 0 ? undefined : val)),
+  default_template_id: z.coerce
+    .number()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val === '' || val === 0 ? undefined : val)),
+  items: z.array(itemSchema).min(1, 'Agregue al menos un equipo'),
 });
+
+type FormValues = z.infer<typeof workOrderSchema>;
 
 interface WorkOrderFormProps {
   initialData?: WorkOrder;
@@ -31,14 +62,12 @@ interface WorkOrderFormProps {
   isLoading: boolean;
 }
 
-// Helper to get equipment display name from whatever fields are available
 function getEquipmentLabel(e: Equipment): string {
   const name = e.name || e.equipment_code || e.model || e.brand || `Equipo #${e.id}`;
   const detail = e.serial_number || e.model || '';
   return detail ? `${name} - ${detail}` : name;
 }
 
-// Helper to get request display label
 function getRequestLabel(r: InspectionRequest): string {
   const number = r.request_number || `SOL-${r.id}`;
   const client = r.client?.name || 'Sin cliente';
@@ -52,25 +81,43 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
   const {
     register,
     handleSubmit,
+    control,
     watch,
-    setValue,
     formState: { errors },
-  } = useForm<WorkOrderFormData>({
+  } = useForm<FormValues>({
     resolver: zodResolver(workOrderSchema),
     defaultValues: initialData
       ? {
           inspection_request_id: initialData.inspection_request_id,
-          equipment_id: initialData.equipment_id,
-          inspector_id: initialData.inspector_id ?? undefined,
-          template_id: initialData.template_id ?? undefined,
           priority: initialData.priority,
           scheduled_date: initialData.scheduled_date?.split('T')[0] ?? '',
           notes: initialData.notes ?? '',
+          default_inspector_id: initialData.inspector_id ?? undefined,
+          default_template_id: initialData.template_id ?? undefined,
+          items: initialData.items && initialData.items.length > 0
+            ? initialData.items.map((item) => ({
+                equipment_id: item.equipment_id,
+                template_id: item.template_id ?? undefined,
+                inspector_id: item.inspector_id ?? undefined,
+                notes: item.notes ?? '',
+              }))
+            : [{
+                equipment_id: initialData.equipment_id,
+                template_id: initialData.template_id ?? undefined,
+                inspector_id: initialData.inspector_id ?? undefined,
+                notes: '',
+              }],
         }
       : {
           priority: 'MEDIUM',
           scheduled_date: new Date().toISOString().split('T')[0],
+          items: [{ equipment_id: 0, template_id: undefined, inspector_id: undefined, notes: '' }],
         },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'items',
   });
 
   const inspectionRequestId = watch('inspection_request_id');
@@ -88,9 +135,11 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
 
   const { data: templatesResponse } = useQuery({
     queryKey: ['inspection-templates-active'],
-    queryFn: () => api.get<PaginatedResponse<InspectionTemplate>>('/inspection-templates?is_active=true&per_page=100'),
+    queryFn: () =>
+      api.get<PaginatedResponse<InspectionTemplate>>('/inspection-templates?is_active=true&per_page=100'),
   });
 
+  // Load equipment when request changes
   useEffect(() => {
     if (!inspectionRequestId) {
       setEquipmentList([]);
@@ -108,9 +157,6 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
         if (cancelled) return;
         const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
         setEquipmentList(list);
-        if (!initialData) {
-          setValue('equipment_id', '' as unknown as number);
-        }
       })
       .catch(() => {
         if (!cancelled) setEquipmentList([]);
@@ -122,7 +168,7 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
     return () => {
       cancelled = true;
     };
-  }, [inspectionRequestId, setValue, initialData]);
+  }, [inspectionRequestId]);
 
   const inspectionRequests = requestsResponse?.data ?? [];
   const users = Array.isArray(usersResponse)
@@ -139,8 +185,44 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
     { value: 'URGENT', label: 'Urgente' },
   ];
 
+  const equipmentOptions = equipmentList.map((e) => ({
+    value: String(e.id),
+    label: getEquipmentLabel(e),
+  }));
+
+  const userOptions = users.map((u: User) => ({
+    value: String(u.id),
+    label: u.name,
+  }));
+
+  const templateOptions = templates.map((t) => ({
+    value: String(t.id),
+    label: `${t.name} (${t.category})`,
+  }));
+
+  const handleAddItem = useCallback(() => {
+    append({ equipment_id: 0, template_id: undefined, inspector_id: undefined, notes: '' });
+  }, [append]);
+
+  const handleFormSubmit = (values: FormValues) => {
+    const data: WorkOrderFormData = {
+      inspection_request_id: values.inspection_request_id,
+      scheduled_date: values.scheduled_date,
+      priority: values.priority,
+      notes: values.notes,
+      items: values.items.map((item) => ({
+        equipment_id: item.equipment_id,
+        template_id: item.template_id ?? values.default_template_id,
+        inspector_id: item.inspector_id ?? values.default_inspector_id,
+        notes: item.notes,
+      })),
+    };
+    onSubmit(data);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+      {/* General info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select
           label="Solicitud de Inspeccion *"
@@ -151,43 +233,6 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
             label: getRequestLabel(r),
           }))}
           {...register('inspection_request_id')}
-        />
-        <Select
-          label="Equipo *"
-          error={errors.equipment_id?.message}
-          placeholder={
-            loadingEquipment
-              ? 'Cargando equipos...'
-              : !inspectionRequestId
-                ? 'Primero seleccione una solicitud'
-                : 'Seleccionar equipo'
-          }
-          disabled={!inspectionRequestId || loadingEquipment}
-          options={equipmentList.map((e) => ({
-            value: String(e.id),
-            label: getEquipmentLabel(e),
-          }))}
-          {...register('equipment_id')}
-        />
-        <Select
-          label="Inspector *"
-          error={errors.inspector_id?.message}
-          placeholder="Seleccionar inspector"
-          options={users.map((u: User) => ({
-            value: String(u.id),
-            label: u.name,
-          }))}
-          {...register('inspector_id')}
-        />
-        <Select
-          label="Plantilla"
-          error={errors.template_id?.message}
-          placeholder="Sin plantilla (seleccionar al inspeccionar)"
-          options={templates.map((t) => ({
-            value: String(t.id),
-            label: `${t.name} (${t.category})`,
-          }))}
-          {...register('template_id')}
         />
         <Select
           label="Prioridad *"
@@ -203,17 +248,122 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
           {...register('scheduled_date')}
         />
       </div>
+
+      {/* Defaults for all items */}
+      <div className="bg-gray-50 rounded-lg p-4">
+        <p className="text-sm font-medium text-gray-700 mb-3">
+          Valores por defecto (se aplican a equipos sin asignacion propia)
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Select
+            label="Inspector por defecto"
+            placeholder="Seleccionar inspector"
+            options={userOptions}
+            {...register('default_inspector_id')}
+          />
+          <Select
+            label="Plantilla por defecto"
+            placeholder="Seleccionar plantilla"
+            options={templateOptions}
+            {...register('default_template_id')}
+          />
+        </div>
+      </div>
+
+      {/* Items (equipment list) */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-900">
+            Equipos a inspeccionar ({fields.length})
+          </h3>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleAddItem}
+            disabled={!inspectionRequestId || loadingEquipment}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Agregar Equipo
+          </Button>
+        </div>
+
+        {errors.items?.message && (
+          <p className="text-sm text-red-600 mb-2">{errors.items.message}</p>
+        )}
+
+        {!inspectionRequestId && (
+          <p className="text-sm text-gray-500 italic py-4 text-center border-2 border-dashed border-gray-300 rounded-lg">
+            Seleccione una solicitud para ver los equipos disponibles
+          </p>
+        )}
+
+        {inspectionRequestId && fields.length === 0 && (
+          <p className="text-sm text-gray-500 italic py-4 text-center border-2 border-dashed border-gray-300 rounded-lg">
+            Agregue al menos un equipo
+          </p>
+        )}
+
+        <div className="space-y-3">
+          {fields.map((field, index) => (
+            <div
+              key={field.id}
+              className="border border-gray-200 rounded-lg p-4 bg-white"
+            >
+              <div className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold flex items-center justify-center mt-5">
+                  {index + 1}
+                </span>
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Select
+                    label="Equipo *"
+                    error={errors.items?.[index]?.equipment_id?.message}
+                    placeholder={loadingEquipment ? 'Cargando...' : 'Seleccionar equipo'}
+                    disabled={loadingEquipment}
+                    options={equipmentOptions}
+                    {...register(`items.${index}.equipment_id`)}
+                  />
+                  <Select
+                    label="Inspector"
+                    placeholder="Usar por defecto"
+                    options={userOptions}
+                    {...register(`items.${index}.inspector_id`)}
+                  />
+                  <Select
+                    label="Plantilla"
+                    placeholder="Usar por defecto"
+                    options={templateOptions}
+                    {...register(`items.${index}.template_id`)}
+                  />
+                </div>
+                {fields.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="flex-shrink-0 mt-7 p-1.5 text-red-500 hover:bg-red-50 rounded"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Notes */}
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700">Notas</label>
         <textarea
           className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          rows={3}
+          rows={2}
           {...register('notes')}
         />
       </div>
-      <div className="flex justify-end gap-3 pt-4">
+
+      <div className="flex justify-end gap-3 pt-2">
         <Button type="submit" isLoading={isLoading}>
-          {initialData ? 'Actualizar' : 'Crear'}
+          {initialData ? 'Actualizar' : 'Crear Orden'}
         </Button>
       </div>
     </form>
