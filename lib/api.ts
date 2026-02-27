@@ -42,7 +42,17 @@ class ApiClient {
     };
 
     this.client.interceptors.response.use(
-      (response) => { response.data = parseData(response.data); return response; },
+      (response) => {
+        response.data = parseData(response.data);
+        // Backend may return HTTP 200 with { success: false } on errors
+        const d = response.data as Record<string, unknown> | null;
+        if (d && typeof d === 'object' && d.success === false && d.message) {
+          const err = new Error(d.message as string) as Error & { response: typeof response };
+          err.response = response;
+          return Promise.reject(err);
+        }
+        return response;
+      },
       (error) => {
         if (error.response) { error.response.data = parseData(error.response.data); }
         return Promise.reject(error);

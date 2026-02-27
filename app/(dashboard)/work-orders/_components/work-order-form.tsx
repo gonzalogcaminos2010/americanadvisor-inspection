@@ -259,17 +259,23 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
   }, [append]);
 
   const handleFormSubmit = (values: FormValues) => {
+    const resolvedItems = values.items.map((item) => ({
+      equipment_id: item.equipment_id,
+      template_id: item.template_id ?? values.default_template_id,
+      inspector_id: item.inspector_id ?? values.default_inspector_id,
+      notes: item.notes,
+    }));
+    const firstItem = resolvedItems[0];
     const data: WorkOrderFormData = {
       inspection_request_id: values.inspection_request_id,
       scheduled_date: values.scheduled_date,
       priority: values.priority,
       notes: values.notes,
-      items: values.items.map((item) => ({
-        equipment_id: item.equipment_id,
-        template_id: item.template_id ?? values.default_template_id,
-        inspector_id: item.inspector_id ?? values.default_inspector_id,
-        notes: item.notes,
-      })),
+      // Backend requires these at root level
+      equipment_id: firstItem?.equipment_id,
+      inspector_id: firstItem?.inspector_id ?? values.default_inspector_id,
+      template_id: firstItem?.template_id ?? values.default_template_id,
+      items: resolvedItems,
     };
     onSubmit(data);
   };
