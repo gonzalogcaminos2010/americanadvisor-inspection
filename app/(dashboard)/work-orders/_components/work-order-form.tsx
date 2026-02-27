@@ -69,7 +69,7 @@ function getEquipmentLabel(e: Equipment): string {
 }
 
 function getRequestLabel(r: InspectionRequest): string {
-  const number = r.request_number || `SOL-${r.id}`;
+  const number = r.number || r.request_number || `SOL-${r.id}`;
   const client = r.client?.name || 'Sin cliente';
   return `${number} - ${client}`;
 }

@@ -194,7 +194,7 @@ export default function WorkOrderDetailPage() {
             Orden {workOrder.order_number ?? workOrder.code}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {workOrder.inspection_request?.request_number ?? `Solicitud #${workOrder.inspection_request_id}`}
+            {workOrder.inspection_request?.number ?? workOrder.inspection_request?.request_number ?? `Solicitud #${workOrder.inspection_request_id}`}
             {' - '}{workOrder.inspection_request?.client?.name ?? ''}
           </p>
         </div>

@@ -63,14 +63,25 @@ export default function InspectionRequestsPage() {
 
   const clients = clientsData?.data ?? [];
 
+  const extractError = (err: unknown): string => {
+    const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string };
+    const backendMsg = axiosErr?.response?.data?.message;
+    const validationErrors = axiosErr?.response?.data?.errors;
+    if (validationErrors) {
+      const firstError = Object.values(validationErrors).flat()[0];
+      if (firstError) return firstError;
+    }
+    return backendMsg || axiosErr?.message || 'Error al procesar la solicitud';
+  };
+
   const handleCreate = (data: InspectionRequestFormData) => {
     createMutation.mutate(data, {
       onSuccess: () => {
         toast.success('Solicitud creada exitosamente');
         setModalOpen(false);
       },
-      onError: () => {
-        toast.error('Error al crear la solicitud');
+      onError: (err) => {
+        toast.error(extractError(err));
       },
     });
   };
@@ -84,8 +95,8 @@ export default function InspectionRequestsPage() {
           toast.success('Solicitud actualizada exitosamente');
           setEditingRequest(null);
         },
-        onError: () => {
-          toast.error('Error al actualizar la solicitud');
+        onError: (err) => {
+          toast.error(extractError(err));
         },
       }
     );
@@ -98,8 +109,8 @@ export default function InspectionRequestsPage() {
         toast.success('Solicitud eliminada exitosamente');
         setDeletingRequest(null);
       },
-      onError: () => {
-        toast.error('Error al eliminar la solicitud');
+      onError: (err) => {
+        toast.error(extractError(err));
       },
     });
   };
@@ -174,7 +185,7 @@ export default function InspectionRequestsPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title="Nueva Solicitud de Inspecci\u00f3n"
-        size="lg"
+        size="xl"
       >
         <RequestForm onSubmit={handleCreate} isLoading={createMutation.isPending} />
       </Modal>
@@ -183,7 +194,7 @@ export default function InspectionRequestsPage() {
         isOpen={!!editingRequest}
         onClose={() => setEditingRequest(null)}
         title="Editar Solicitud de Inspecci\u00f3n"
-        size="lg"
+        size="xl"
       >
         {editingRequest && (
           <RequestForm
@@ -199,7 +210,7 @@ export default function InspectionRequestsPage() {
         onClose={() => setDeletingRequest(null)}
         onConfirm={handleDelete}
         title="Eliminar Solicitud"
-        message={`\u00bfEst\u00e1 seguro de eliminar la solicitud ${deletingRequest?.request_number ?? ''}? Esta acci\u00f3n no se puede deshacer.`}
+        message={`\u00bfEst\u00e1 seguro de eliminar la solicitud ${deletingRequest?.number ?? deletingRequest?.request_number ?? ''}? Esta acci\u00f3n no se puede deshacer.`}
         isLoading={deleteMutation.isPending}
       />
     </div>

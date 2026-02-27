@@ -16,7 +16,7 @@ export function getWorkOrderColumns(
     {
       key: 'inspection_request',
       header: 'Solicitud',
-      render: (order: WorkOrder) => order.inspection_request?.request_number ?? '-',
+      render: (order: WorkOrder) => order.inspection_request?.number ?? order.inspection_request?.request_number ?? '-',
     },
     {
       key: 'equipment',

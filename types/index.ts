@@ -146,19 +146,25 @@ export interface InspectionRequest {
   id: number;
   client_id: number;
   service_type_id: number;
-  request_number: string;
+  number: string;
+  request_number?: string;
   request_date: string;
   due_date: string | null;
   status: InspectionRequestStatus;
   priority: string;
+  inspection_type: string;
+  requested_by: string;
+  total_amount: string | null;
   amount: number | null;
   currency: string | null;
   description: string | null;
   notes: string | null;
+  work_orders_count?: number;
   created_at: string;
   updated_at: string;
   client?: Client;
   service_type?: ServiceType;
+  creator?: User;
 }
 
 export enum WorkOrderItemStatus {
@@ -363,12 +369,15 @@ export interface EquipmentFormData {
 export interface InspectionRequestFormData {
   client_id: number;
   service_type_id: number;
+  request_number: string;
   request_date: string;
   due_date?: string;
   priority: string;
+  inspection_type: string;
+  requested_by: string;
+  description: string;
   amount?: number;
   currency?: string;
-  description?: string;
   notes?: string;
 }
 

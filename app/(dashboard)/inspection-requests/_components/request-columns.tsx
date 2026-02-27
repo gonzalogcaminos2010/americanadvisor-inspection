@@ -6,12 +6,26 @@ import { Button } from '@/components/ui/button';
 import { Column } from '@/components/shared/data-table';
 import { Pencil, Trash2 } from 'lucide-react';
 
+const INSPECTION_TYPE_LABELS: Record<string, string> = {
+  PREVENTIVE: 'Preventiva',
+  CORRECTIVE: 'Correctiva',
+  CERTIFICATION: 'Certificación',
+  ROUTINE: 'Rutinaria',
+  PRE_USE: 'Pre-uso',
+};
+
 export function getRequestColumns(
   onEdit: (request: InspectionRequest) => void,
   onDelete: (request: InspectionRequest) => void
 ): Column<InspectionRequest>[] {
   return [
-    { key: 'request_number', header: 'N\u00b0 Solicitud' },
+    {
+      key: 'number',
+      header: 'N° Solicitud',
+      render: (request: InspectionRequest) => (
+        <span className="font-medium">{request.number || request.request_number || '-'}</span>
+      ),
+    },
     {
       key: 'client',
       header: 'Cliente',
@@ -19,20 +33,20 @@ export function getRequestColumns(
     },
     {
       key: 'service_type',
-      header: 'Tipo de Servicio',
+      header: 'Servicio',
       render: (request: InspectionRequest) => request.service_type?.name ?? '-',
     },
     {
-      key: 'request_date',
-      header: 'Fecha Solicitud',
+      key: 'inspection_type',
+      header: 'Tipo',
       render: (request: InspectionRequest) =>
-        new Date(request.request_date).toLocaleDateString('es'),
+        INSPECTION_TYPE_LABELS[request.inspection_type] || request.inspection_type || '-',
     },
     {
-      key: 'due_date',
-      header: 'Fecha L\u00edmite',
+      key: 'request_date',
+      header: 'Fecha',
       render: (request: InspectionRequest) =>
-        request.due_date ? new Date(request.due_date).toLocaleDateString('es') : '-',
+        new Date(request.request_date).toLocaleDateString('es-AR'),
     },
     {
       key: 'status',
@@ -42,7 +56,8 @@ export function getRequestColumns(
     {
       key: 'priority',
       header: 'Prioridad',
-      render: (request: InspectionRequest) => <Badge status={request.priority} />,
+      render: (request: InspectionRequest) =>
+        request.priority ? <Badge status={request.priority} /> : <span className="text-gray-400">-</span>,
     },
     {
       key: 'actions',
