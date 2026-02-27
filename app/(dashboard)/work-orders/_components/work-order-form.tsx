@@ -109,9 +109,12 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
               }],
         }
       : {
+          inspection_request_id: '' as unknown as number,
           priority: 'MEDIUM',
           scheduled_date: new Date().toISOString().split('T')[0],
-          items: [{ equipment_id: 0, template_id: undefined, inspector_id: undefined, notes: '' }],
+          default_inspector_id: '' as unknown as number,
+          default_template_id: '' as unknown as number,
+          items: [{ equipment_id: '' as unknown as number, template_id: undefined, inspector_id: undefined, notes: '' }],
         },
   });
 
