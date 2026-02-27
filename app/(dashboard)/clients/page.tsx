@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Client, ClientFormData } from '@/types';
 import { useCrud } from '@/hooks/use-crud';
 import { useToast } from '@/components/ui/toast';
@@ -19,6 +20,7 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
 
+  const router = useRouter();
   const { toast } = useToast();
   const { useList, useCreate, useUpdate, useDelete } = useCrud<Client, ClientFormData>({
     endpoint: '/clients',
@@ -89,9 +91,14 @@ export default function ClientsPage() {
     });
   };
 
+  const handleView = useCallback((client: Client) => {
+    router.push(`/clients/${client.id}`);
+  }, [router]);
+
   const columns = useMemo(
-    () => getClientColumns(handleOpenEdit, handleOpenDelete),
-    []
+    () => getClientColumns(handleOpenEdit, handleOpenDelete, handleView),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [handleView]
   );
 
   return (
