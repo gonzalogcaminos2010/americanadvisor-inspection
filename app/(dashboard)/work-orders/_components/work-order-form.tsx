@@ -139,6 +139,14 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
       api.get<PaginatedResponse<InspectionTemplate>>('/inspection-templates?is_active=true&per_page=100'),
   });
 
+  const inspectionRequests = requestsResponse?.data ?? [];
+  const users = Array.isArray(usersResponse)
+    ? usersResponse
+    : Array.isArray(usersResponse?.data)
+      ? usersResponse.data
+      : [];
+  const templates = templatesResponse?.data ?? [];
+
   // Load equipment when request changes
   useEffect(() => {
     if (!inspectionRequestId) {
@@ -149,6 +157,13 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
     let cancelled = false;
     setLoadingEquipment(true);
 
+    // Get client_id from selected request for fallback
+    const selectedRequest = inspectionRequests.find(
+      (r) => r.id === Number(inspectionRequestId)
+    );
+    const clientId = selectedRequest?.client_id ?? selectedRequest?.client?.id;
+
+    // Try available-equipment first, fallback to client equipment
     api
       .get<{ success: boolean; data: Equipment[] }>(
         `/inspection-requests/${inspectionRequestId}/available-equipment`
@@ -156,27 +171,63 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
       .then((res) => {
         if (cancelled) return;
         const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-        setEquipmentList(list);
+        if (list.length > 0) {
+          setEquipmentList(list);
+          setLoadingEquipment(false);
+        } else if (clientId) {
+          // Fallback: load all equipment for the client
+          return api
+            .get<{ success: boolean; data: Equipment[] }>(
+              `/equipment?client_id=${clientId}&per_page=100`
+            )
+            .then((fallback) => {
+              if (cancelled) return;
+              const fbList = Array.isArray(fallback)
+                ? fallback
+                : Array.isArray(fallback?.data)
+                  ? fallback.data
+                  : [];
+              setEquipmentList(fbList);
+              setLoadingEquipment(false);
+            });
+        } else {
+          setLoadingEquipment(false);
+        }
       })
       .catch(() => {
-        if (!cancelled) setEquipmentList([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingEquipment(false);
+        if (cancelled) return;
+        // Fallback on error
+        if (clientId) {
+          api
+            .get<{ success: boolean; data: Equipment[] }>(
+              `/equipment?client_id=${clientId}&per_page=100`
+            )
+            .then((fallback) => {
+              if (cancelled) return;
+              const fbList = Array.isArray(fallback)
+                ? fallback
+                : Array.isArray(fallback?.data)
+                  ? fallback.data
+                  : [];
+              setEquipmentList(fbList);
+            })
+            .catch(() => {
+              if (!cancelled) setEquipmentList([]);
+            })
+            .finally(() => {
+              if (!cancelled) setLoadingEquipment(false);
+            });
+        } else {
+          setEquipmentList([]);
+          setLoadingEquipment(false);
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [inspectionRequestId]);
-
-  const inspectionRequests = requestsResponse?.data ?? [];
-  const users = Array.isArray(usersResponse)
-    ? usersResponse
-    : Array.isArray(usersResponse?.data)
-      ? usersResponse.data
-      : [];
-  const templates = templatesResponse?.data ?? [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspectionRequestId, inspectionRequests.length]);
 
   const priorityOptions = [
     { value: 'LOW', label: 'Baja' },
