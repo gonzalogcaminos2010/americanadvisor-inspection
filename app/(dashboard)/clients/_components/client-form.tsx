@@ -7,8 +7,13 @@ import { Client, ClientFormData } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
+function generateClientCode(): string {
+  const num = Date.now().toString(36).slice(-4).toUpperCase() + Math.random().toString(36).slice(2, 4).toUpperCase();
+  return `CLI-${num}`;
+}
+
 const clientSchema = z.object({
-  code: z.string().min(1, 'El código es requerido'),
+  code: z.string().min(1, 'El codigo es requerido'),
   name: z.string().min(1, 'El nombre es requerido'),
   tax_id: z.string().min(1, 'El RFC/NIT es requerido'),
   email: z.string().email('Email inválido').or(z.literal('')).optional(),
@@ -56,15 +61,21 @@ export function ClientForm({ initialData, onSubmit, isLoading }: ClientFormProps
           industry_type: initialData.industry_type ?? '',
           notes: initialData.notes ?? '',
         }
-      : undefined,
+      : {
+          code: generateClientCode(),
+        },
   });
+
+  const isEditing = !!initialData;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Input
-          label="Código"
+          label="Codigo"
           error={errors.code?.message}
+          readOnly={!isEditing}
+          className={!isEditing ? 'bg-gray-100' : ''}
           {...register('code')}
         />
         <Input

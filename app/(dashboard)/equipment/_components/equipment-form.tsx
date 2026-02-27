@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,6 +39,8 @@ export function EquipmentForm({ initialData, onSubmit, isLoading }: EquipmentFor
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<EquipmentFormData>({
     resolver: zodResolver(equipmentSchema),
@@ -59,7 +62,30 @@ export function EquipmentForm({ initialData, onSubmit, isLoading }: EquipmentFor
         },
   });
 
-  const clientOptions = (clientsData?.data || []).map((c) => ({
+  const clients = clientsData?.data || [];
+  const selectedClientId = watch('client_id');
+  const isEditing = !!initialData;
+
+  // Auto-generate equipment_code when client changes (only on create)
+  useEffect(() => {
+    if (isEditing || !selectedClientId) return;
+    const client = clients.find((c) => c.id === Number(selectedClientId));
+    if (!client) return;
+
+    // Fetch client's equipment to get next sequential number
+    api.get<{ success: boolean; data: Equipment[] }>(`/clients/${client.id}/equipment`)
+      .then((res) => {
+        const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+        const nextNum = String(list.length + 1).padStart(3, '0');
+        setValue('equipment_code', `${client.code}-EQ-${nextNum}`);
+      })
+      .catch(() => {
+        const rand = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+        setValue('equipment_code', `${client.code}-EQ-${rand}`);
+      });
+  }, [selectedClientId, clients, isEditing, setValue]);
+
+  const clientOptions = clients.map((c) => ({
     value: String(c.id),
     label: c.name,
   }));
@@ -90,6 +116,8 @@ export function EquipmentForm({ initialData, onSubmit, isLoading }: EquipmentFor
         <Input
           label="Codigo de Equipo"
           error={errors.equipment_code?.message}
+          readOnly={!isEditing}
+          className={!isEditing ? 'bg-gray-100' : ''}
           {...register('equipment_code')}
         />
         <Input
