@@ -256,6 +256,7 @@ export interface TemplateQuestion {
 export interface Inspection {
   id: number;
   work_order_id: number;
+  work_order_item_id?: number | null;
   template_id: number;
   inspector_id: number;
   status: InspectionStatus;

@@ -273,11 +273,18 @@ export default function WorkOrderDetailPage() {
               const isItemCompleted = item.status === 'COMPLETED';
               const isItemSkipped = item.status === 'SKIPPED';
 
-              // Find any active inspection associated with this work order
-              const activeInsp = inspections.find(
-                (i) => (i.status === InspectionStatus.NOT_STARTED || i.status === InspectionStatus.IN_PROGRESS || i.status === InspectionStatus.STANDBY)
+              // Find inspection associated with this specific item
+              const itemInspections = inspections.filter(
+                (i) => i.work_order_item_id === item.id
               );
-              const completedInsp = inspections.find(
+              // Fallback: if no work_order_item_id match, try by equipment via template
+              const relevantInspections = itemInspections.length > 0
+                ? itemInspections
+                : inspections.filter((i) => item.template_id && i.template_id === item.template_id);
+              const activeInsp = relevantInspections.find(
+                (i) => i.status === InspectionStatus.NOT_STARTED || i.status === InspectionStatus.IN_PROGRESS || i.status === InspectionStatus.STANDBY
+              );
+              const completedInsp = relevantInspections.find(
                 (i) => i.status === InspectionStatus.COMPLETED || i.status === InspectionStatus.SUBMITTED
               );
 
