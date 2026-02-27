@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useCrud } from '@/hooks/use-crud';
 import { api } from '@/lib/api';
@@ -115,10 +116,17 @@ export default function InspectionRequestsPage() {
     });
   };
 
-  const columns = getRequestColumns(
+  const router = useRouter();
+
+  const handleView = useCallback((request: InspectionRequest) => {
+    router.push(`/inspection-requests/${request.id}`);
+  }, [router]);
+
+  const columns = useMemo(() => getRequestColumns(
     (request) => setEditingRequest(request),
-    (request) => setDeletingRequest(request)
-  );
+    (request) => setDeletingRequest(request),
+    handleView
+  ), [handleView]);
 
   return (
     <div>

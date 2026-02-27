@@ -4,7 +4,7 @@ import { InspectionRequest } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Column } from '@/components/shared/data-table';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 
 const INSPECTION_TYPE_LABELS: Record<string, string> = {
   PREVENTIVE: 'Preventiva',
@@ -16,7 +16,8 @@ const INSPECTION_TYPE_LABELS: Record<string, string> = {
 
 export function getRequestColumns(
   onEdit: (request: InspectionRequest) => void,
-  onDelete: (request: InspectionRequest) => void
+  onDelete: (request: InspectionRequest) => void,
+  onView: (request: InspectionRequest) => void
 ): Column<InspectionRequest>[] {
   return [
     {
@@ -64,6 +65,10 @@ export function getRequestColumns(
       header: 'Acciones',
       render: (request: InspectionRequest) => (
         <div className="flex gap-2">
+          <Button variant="primary" size="sm" onClick={() => onView(request)}>
+            <Eye className="h-4 w-4 mr-1" />
+            Ver
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => onEdit(request)}>
             <Pencil className="h-4 w-4" />
           </Button>
