@@ -8,6 +8,7 @@ import {
   WorkOrder,
   WorkOrderItem,
   Inspection,
+  InspectionTemplate,
   InspectionStatus,
   WorkOrderStatus,
   ApiResponse,
@@ -17,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
+import { Modal } from '@/components/ui/modal';
 import { InspectionExecutor } from '@/components/inspection/inspection-executor';
 import {
   ArrowLeft,
@@ -40,6 +42,8 @@ export default function WorkOrderDetailPage() {
   const [showExecutor, setShowExecutor] = useState(false);
   const [activeInspectionId, setActiveInspectionId] = useState<number | null>(null);
   const [executorLabel, setExecutorLabel] = useState('');
+  const [templatePickerItem, setTemplatePickerItem] = useState<WorkOrderItem | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
 
   // Fetch work order with relations
   const { data: woResponse, isLoading: woLoading } = useQuery<ApiResponse<WorkOrder>>({
@@ -61,6 +65,13 @@ export default function WorkOrderDetailPage() {
     queryFn: () => api.get(`/inspections?work_order_id=${id}&per_page=50`),
     enabled: !!id,
   });
+
+  // Fetch active templates (for template picker when item has no template)
+  const { data: templatesResponse } = useQuery<PaginatedResponse<InspectionTemplate>>({
+    queryKey: ['inspection-templates-active'],
+    queryFn: () => api.get('/inspection-templates?is_active=true&per_page=100'),
+  });
+  const templates: InspectionTemplate[] = templatesResponse?.data ?? [];
 
   const workOrder = woResponse?.data;
   const rawItems = itemsResponse;
@@ -124,11 +135,27 @@ export default function WorkOrderDetailPage() {
   });
 
   const handleStartInspection = (item: WorkOrderItem) => {
+    const templateId = item.template_id ?? workOrder?.template_id;
+    if (!templateId) {
+      // No template pre-assigned — show picker
+      setTemplatePickerItem(item);
+      setSelectedTemplateId(templates.length > 0 ? templates[0].id : null);
+      return;
+    }
     setExecutorLabel(item.equipment?.name ?? `Equipo #${item.equipment_id}`);
     createInspectionMutation.mutate({
       work_order_item_id: item.id,
-      template_id: item.template_id ?? undefined,
+      template_id: templateId,
     });
+  };
+
+  const handleConfirmTemplatePicker = () => {
+    if (!templatePickerItem || !selectedTemplateId) return;
+    setExecutorLabel(templatePickerItem.equipment?.name ?? `Equipo #${templatePickerItem.equipment_id}`);
+    createInspectionMutation.mutate(
+      { work_order_item_id: templatePickerItem.id, template_id: selectedTemplateId },
+      { onSettled: () => setTemplatePickerItem(null) }
+    );
   };
 
   const handleContinueInspection = (inspection: Inspection, label: string) => {
@@ -434,6 +461,62 @@ export default function WorkOrderDetailPage() {
           Volver a Ordenes
         </Button>
       </div>
+
+      {/* Template picker modal */}
+      <Modal
+        isOpen={!!templatePickerItem}
+        onClose={() => setTemplatePickerItem(null)}
+        title="Seleccionar Plantilla de Inspeccion"
+        size="md"
+      >
+        <p className="text-sm text-gray-600 mb-3">
+          Este equipo no tiene una plantilla asignada. Seleccione la plantilla a utilizar para
+          <span className="font-semibold"> {templatePickerItem?.equipment?.name}</span>:
+        </p>
+        {templates.length === 0 ? (
+          <p className="text-sm text-red-600 py-4">No hay plantillas activas disponibles.</p>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {templates.map((t) => (
+              <label
+                key={t.id}
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selectedTemplateId === t.id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="template_picker"
+                  value={t.id}
+                  checked={selectedTemplateId === t.id}
+                  onChange={() => setSelectedTemplateId(t.id)}
+                  className="text-blue-600"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{t.name}</p>
+                  <p className="text-xs text-gray-500">{t.category} {t.sections_count ? `- ${t.sections_count} secciones` : ''}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-end gap-3 mt-4">
+          <Button variant="secondary" size="sm" onClick={() => setTemplatePickerItem(null)}>
+            Cancelar
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleConfirmTemplatePicker}
+            disabled={!selectedTemplateId}
+            isLoading={createInspectionMutation.isPending}
+          >
+            <Play className="h-3 w-3 mr-1" />
+            Iniciar Inspeccion
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
