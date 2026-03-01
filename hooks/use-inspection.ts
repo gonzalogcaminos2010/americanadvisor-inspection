@@ -32,6 +32,7 @@ export function useInspection(inspectionId: number | null) {
   const [answers, setAnswers] = useState<Map<number, AnswerSubmission>>(new Map());
   const [pendingSync, setPendingSync] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const answersRef = useRef<Map<number, AnswerSubmission>>(answers);
 
   // Fetch full inspection with template, answers, findings
   const {
@@ -103,6 +104,38 @@ export function useInspection(inspectionId: number | null) {
     (s) => s.requiredAnswered >= s.required
   );
 
+  // Keep ref in sync with state so debounced saves always read latest answers
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  // Batch save answers
+  const saveAnswersMutation = useMutation<ApiResponse<InspectionAnswer[]>, Error, AnswerSubmission[]>({
+    mutationFn: (answersBatch) =>
+      api.post(`/inspections/${inspectionId}/answers`, { answers: answersBatch }),
+    onSuccess: () => {
+      setPendingSync(false);
+      queryClient.invalidateQueries({ queryKey: ['inspection', inspectionId] });
+    },
+    onError: () => {
+      setPendingSync(false);
+    },
+  });
+
+  // Use a ref for the mutation so the debounced callback never goes stale
+  const saveMutationRef = useRef(saveAnswersMutation);
+  useEffect(() => {
+    saveMutationRef.current = saveAnswersMutation;
+  }, [saveAnswersMutation]);
+
+  const syncAnswers = useCallback(() => {
+    if (!inspectionId) return;
+    const batch = Array.from(answersRef.current.values());
+    if (batch.length > 0) {
+      saveMutationRef.current.mutate(batch);
+    }
+  }, [inspectionId]);
+
   // Set answer for a question
   const setAnswer = useCallback(
     (questionId: number, submission: Partial<AnswerSubmission>) => {
@@ -122,28 +155,8 @@ export function useInspection(inspectionId: number | null) {
         syncAnswers();
       }, 2000);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [inspectionId]
+    [syncAnswers]
   );
-
-  // Batch save answers
-  const saveAnswersMutation = useMutation<ApiResponse<InspectionAnswer[]>, Error, AnswerSubmission[]>({
-    mutationFn: (answersBatch) =>
-      api.post(`/inspections/${inspectionId}/answers`, { answers: answersBatch }),
-    onSuccess: () => {
-      setPendingSync(false);
-      queryClient.invalidateQueries({ queryKey: ['inspection', inspectionId] });
-    },
-  });
-
-  const syncAnswers = useCallback(() => {
-    if (!inspectionId) return;
-    const batch = Array.from(answers.values());
-    if (batch.length > 0) {
-      saveAnswersMutation.mutate(batch);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inspectionId, answers]);
 
   // Submit inspection (finalize)
   const submitMutation = useMutation<ApiResponse<Inspection>, Error, { signature_data?: string; gps_latitude?: number; gps_longitude?: number; notes?: string }>({
