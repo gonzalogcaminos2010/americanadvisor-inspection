@@ -196,7 +196,16 @@ export default function WorkOrderDetailPage() {
             {workOrder.order_number ?? workOrder.code} - {executorLabel}
           </span>
         </div>
-        <InspectionExecutor inspectionId={activeInspectionId} />
+        <InspectionExecutor
+          inspectionId={activeInspectionId}
+          onCompleted={() => {
+            setShowExecutor(false);
+            setActiveInspectionId(null);
+            queryClient.invalidateQueries({ queryKey: ['work-order', id] });
+            queryClient.invalidateQueries({ queryKey: ['work-order-items', id] });
+            queryClient.invalidateQueries({ queryKey: ['work-order-inspections', id] });
+          }}
+        />
       </div>
     );
   }

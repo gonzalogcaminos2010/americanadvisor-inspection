@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Menu, X, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { useInspection } from '@/hooks/use-inspection';
+import { useToast } from '@/components/ui/toast';
 import { SectionProgress } from './section-progress';
 import { QuestionRenderer } from './question-renderer';
 import { InspectionSummary } from './inspection-summary';
@@ -13,9 +14,10 @@ import type { FindingFormData } from '@/types';
 
 interface InspectionExecutorProps {
   inspectionId: number;
+  onCompleted?: () => void;
 }
 
-export function InspectionExecutor({ inspectionId }: InspectionExecutorProps) {
+export function InspectionExecutor({ inspectionId, onCompleted }: InspectionExecutorProps) {
   const {
     inspection,
     sections,
@@ -38,8 +40,33 @@ export function InspectionExecutor({ inspectionId }: InspectionExecutorProps) {
     createFindingMutation,
   } = useInspection(inspectionId);
 
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmitInspection = useCallback(
+    (data: { signature_data?: string; gps_latitude?: number; gps_longitude?: number; notes?: string }) => {
+      // Sync any pending answers first, then submit
+      syncAnswers();
+      submitMutation.mutate(data, {
+        onSuccess: () => {
+          toast.success('Inspeccion enviada exitosamente');
+          setSubmitted(true);
+          if (onCompleted) {
+            // Small delay so the user sees the success toast
+            setTimeout(() => onCompleted(), 1500);
+          }
+        },
+        onError: (err: unknown) => {
+          const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+          const msg = axiosErr?.response?.data?.message || axiosErr?.message || 'Error al enviar la inspeccion';
+          toast.error(msg);
+        },
+      });
+    },
+    [syncAnswers, submitMutation, toast, onCompleted]
+  );
 
   if (isLoading) {
     return (
@@ -70,9 +97,15 @@ export function InspectionExecutor({ inspectionId }: InspectionExecutorProps) {
           sectionProgress={sectionProgress}
           answers={answers}
           inspection={inspection}
-          onSubmit={(data) => submitMutation.mutate(data)}
+          onSubmit={handleSubmitInspection}
           isSubmitting={submitMutation.isPending}
         />
+        {submitted && (
+          <div className="mt-6 rounded-lg border border-green-200 bg-green-50 p-4 text-center">
+            <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-green-800">Inspeccion enviada exitosamente</p>
+          </div>
+        )}
       </div>
     );
   }
