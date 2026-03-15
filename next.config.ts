@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `http://167.71.125.132/api/v1/:path*`,
+        destination: `https://api-inspeccion-api.2wxlnf.easypanel.host/api/v1/:path*`,
       },
     ];
   },
