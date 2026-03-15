@@ -8,7 +8,6 @@ import {
   Users,
   Wrench,
   ClipboardList,
-  CheckCircle,
   AlertCircle,
   Clock,
   Plus,
