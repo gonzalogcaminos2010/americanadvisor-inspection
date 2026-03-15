@@ -10,6 +10,7 @@ import {
   QuestionType,
   ApiResponse,
 } from '@/types';
+import { mapTemplateFromApi } from '@/hooks/use-crud';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
@@ -24,7 +25,13 @@ export default function TemplateDetailPage() {
 
   const { data: response, isLoading } = useQuery<ApiResponse<InspectionTemplate>>({
     queryKey: ['inspection-templates', id],
-    queryFn: () => api.get(`/inspection-templates/${id}`),
+    queryFn: async () => {
+      const raw = await api.get<ApiResponse<InspectionTemplate>>(`/inspection-templates/${id}`);
+      if (raw?.data) {
+        raw.data = mapTemplateFromApi(raw.data as unknown as Record<string, unknown>) as unknown as InspectionTemplate;
+      }
+      return raw;
+    },
     enabled: !!id,
   });
 

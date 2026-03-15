@@ -313,6 +313,8 @@ export function useTemplateBuilder(templateId?: number) {
   );
 
   // Build payload for API
+  // Send both frontend field names (title, sort_order, question_text, question_type)
+  // and API field names (name, order, text, type) for maximum compatibility.
   const buildPayload = useCallback(() => {
     return {
       name: state.name,
@@ -324,16 +326,25 @@ export function useTemplateBuilder(templateId?: number) {
       is_active: state.is_active,
       sections: state.sections.map((s) => ({
         id: s.id,
+        // frontend field names
         title: s.title,
-        description: s.description || null,
         sort_order: s.sort_order,
+        // API field names
+        name: s.title,
+        order: s.sort_order,
+        description: s.description || null,
         is_required: s.is_required,
         questions: s.questions.map((q) => ({
           id: q.id,
+          // frontend field names
           question_text: q.question_text,
           question_type: q.question_type,
-          is_required: q.is_required,
           sort_order: q.sort_order,
+          // API field names
+          text: q.question_text,
+          type: q.question_type,
+          order: q.sort_order,
+          is_required: q.is_required,
           options: q.options.length > 0 ? q.options : null,
           help_text: q.help_text || null,
           fail_values: q.fail_values.length > 0 ? q.fail_values : null,

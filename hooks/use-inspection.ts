@@ -13,6 +13,7 @@ import {
   Finding,
   FindingFormData,
 } from '@/types';
+import { mapTemplateFromApi } from '@/hooks/use-crud';
 
 // === Progress tracking ===
 export interface SectionProgress {
@@ -41,7 +42,16 @@ export function useInspection(inspectionId: number | null) {
     refetch,
   } = useQuery<ApiResponse<Inspection>>({
     queryKey: ['inspection', inspectionId],
-    queryFn: () => api.get(`/inspections/${inspectionId}`),
+    queryFn: async () => {
+      const raw = await api.get<ApiResponse<Inspection>>(`/inspections/${inspectionId}`);
+      // Map template section/question field names from API to frontend format
+      if (raw?.data?.template) {
+        raw.data.template = mapTemplateFromApi(
+          raw.data.template as unknown as Record<string, unknown>
+        ) as unknown as typeof raw.data.template;
+      }
+      return raw;
+    },
     enabled: !!inspectionId,
   });
 

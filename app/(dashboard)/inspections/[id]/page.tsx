@@ -15,6 +15,7 @@ import {
   TemplateSection,
   QUESTION_TYPE_LABELS,
 } from '@/types';
+import { mapTemplateFromApi } from '@/hooks/use-crud';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -31,7 +32,16 @@ export default function InspectionDetailPage() {
 
   const { data: response, isLoading } = useQuery<ApiResponse<Inspection>>({
     queryKey: ['inspection', id],
-    queryFn: () => api.get(`/inspections/${id}`),
+    queryFn: async () => {
+      const raw = await api.get<ApiResponse<Inspection>>(`/inspections/${id}`);
+      // Map template section/question field names from API to frontend format
+      if (raw?.data?.template) {
+        raw.data.template = mapTemplateFromApi(
+          raw.data.template as unknown as Record<string, unknown>
+        ) as unknown as typeof raw.data.template;
+      }
+      return raw;
+    },
     enabled: !!id,
   });
 

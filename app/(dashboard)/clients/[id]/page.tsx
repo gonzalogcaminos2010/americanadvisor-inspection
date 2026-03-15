@@ -19,6 +19,30 @@ import {
   ClipboardList,
 } from 'lucide-react';
 
+// Map API fields to frontend fields (same logic as use-crud mappers)
+function mapClientFromApi(data: Record<string, unknown>) {
+  return {
+    ...data,
+    code: data.code || '',
+    tax_id: data.ruc || '',
+    email: data.contact_email || '',
+    phone: data.contact_phone || '',
+    contact_person: data.contact_name || '',
+    active: data.is_active ?? true,
+  };
+}
+
+function mapEquipmentFromApi(data: Record<string, unknown>) {
+  return {
+    ...data,
+    equipment_code: data.internal_code || '',
+    location: '',
+    description: '',
+    status: data.status ? String(data.status).toUpperCase() : 'ACTIVE',
+    active: data.status === 'active',
+  };
+}
+
 export default function ClientDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -26,13 +50,29 @@ export default function ClientDetailPage() {
 
   const { data: clientResponse, isLoading } = useQuery<ApiResponse<Client>>({
     queryKey: ['client', id],
-    queryFn: () => api.get(`/clients/${id}`),
+    queryFn: async () => {
+      const raw = await api.get<Record<string, unknown>>(`/clients/${id}`);
+      if (raw && typeof raw === 'object' && raw.data) {
+        (raw as Record<string, unknown>).data = mapClientFromApi(raw.data as Record<string, unknown>);
+      }
+      return raw as unknown as ApiResponse<Client>;
+    },
     enabled: !!id,
   });
 
   const { data: equipmentResponse } = useQuery<ApiResponse<Equipment[]> | PaginatedResponse<Equipment>>({
     queryKey: ['client-equipment', id],
-    queryFn: () => api.get(`/clients/${id}/equipment`),
+    queryFn: async () => {
+      const raw = await api.get<Record<string, unknown>>(`/clients/${id}/equipment`);
+      // Map each equipment item from API format
+      if (raw && typeof raw === 'object') {
+        const r = raw as Record<string, unknown>;
+        if (Array.isArray(r.data)) {
+          r.data = (r.data as Record<string, unknown>[]).map(mapEquipmentFromApi);
+        }
+      }
+      return raw as unknown as ApiResponse<Equipment[]> | PaginatedResponse<Equipment>;
+    },
     enabled: !!id,
   });
 

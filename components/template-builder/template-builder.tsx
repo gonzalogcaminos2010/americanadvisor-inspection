@@ -14,6 +14,7 @@ import {
   ApiResponse,
   TEMPLATE_CATEGORIES,
 } from '@/types';
+import { mapTemplateFromApi } from '@/hooks/use-crud';
 import { Plus, Save, Eye, EyeOff } from 'lucide-react';
 
 interface TemplateBuilderProps {
@@ -46,10 +47,15 @@ export function TemplateBuilder({ templateId, onSaved }: TemplateBuilderProps) {
   // Fetch template for edit mode
   const { data: templateData } = useQuery<ApiResponse<InspectionTemplate>>({
     queryKey: ['inspection-templates', templateId],
-    queryFn: () =>
-      api.get<ApiResponse<InspectionTemplate>>(
+    queryFn: async () => {
+      const raw = await api.get<ApiResponse<InspectionTemplate>>(
         `/inspection-templates/${templateId}`
-      ),
+      );
+      if (raw?.data) {
+        raw.data = mapTemplateFromApi(raw.data as unknown as Record<string, unknown>) as unknown as InspectionTemplate;
+      }
+      return raw;
+    },
     enabled: !!templateId,
   });
 

@@ -131,8 +131,8 @@ export default function InspectionRequestsPage() {
   return (
     <div>
       <PageHeader
-        title="Solicitudes de Inspecci\u00f3n"
-        description="Gestiona las solicitudes de inspecci\u00f3n de tus clientes"
+        title="Solicitudes de Inspección"
+        description="Gestiona las solicitudes de inspección de tus clientes"
         actionLabel="Nueva Solicitud"
         onAction={() => setModalOpen(true)}
       />
@@ -192,7 +192,7 @@ export default function InspectionRequestsPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Nueva Solicitud de Inspecci\u00f3n"
+        title="Nueva Solicitud de Inspección"
         size="xl"
       >
         <RequestForm onSubmit={handleCreate} isLoading={createMutation.isPending} />
@@ -201,7 +201,7 @@ export default function InspectionRequestsPage() {
       <Modal
         isOpen={!!editingRequest}
         onClose={() => setEditingRequest(null)}
-        title="Editar Solicitud de Inspecci\u00f3n"
+        title="Editar Solicitud de Inspección"
         size="xl"
       >
         {editingRequest && (
@@ -218,7 +218,7 @@ export default function InspectionRequestsPage() {
         onClose={() => setDeletingRequest(null)}
         onConfirm={handleDelete}
         title="Eliminar Solicitud"
-        message={`\u00bfEst\u00e1 seguro de eliminar la solicitud ${deletingRequest?.number ?? deletingRequest?.request_number ?? ''}? Esta acci\u00f3n no se puede deshacer.`}
+        message={`¿Está seguro de eliminar la solicitud ${deletingRequest?.number ?? deletingRequest?.request_number ?? ''}? Esta acción no se puede deshacer.`}
         isLoading={deleteMutation.isPending}
       />
     </div>
