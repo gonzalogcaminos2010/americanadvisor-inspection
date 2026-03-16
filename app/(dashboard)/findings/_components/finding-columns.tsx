@@ -12,10 +12,12 @@ export function getFindingColumns(
 ): Column<Finding>[] {
   return [
     {
-      key: 'title',
-      header: 'Titulo',
-      render: (item: Finding) =>
-        item.title.length > 40 ? item.title.slice(0, 40) + '...' : item.title,
+      key: 'description',
+      header: 'Descripcion',
+      render: (item: Finding) => {
+        const text = (item as unknown as Record<string, unknown>).description as string || item.title || '-';
+        return text.length > 40 ? text.slice(0, 40) + '...' : text;
+      },
     },
     {
       key: 'inspection_id',
@@ -33,18 +35,20 @@ export function getFindingColumns(
       render: (item: Finding) => <Badge status={item.status} />,
     },
     {
-      key: 'corrective_action',
-      header: 'Accion Correctiva',
+      key: 'recommendation',
+      header: 'Recomendacion',
       render: (item: Finding) => {
-        const text = item.corrective_action ?? '-';
+        const text = (item as unknown as Record<string, unknown>).recommendation as string || item.corrective_action || '-';
         return text.length > 40 ? text.slice(0, 40) + '...' : text;
       },
     },
     {
-      key: 'due_date',
-      header: 'Fecha Limite',
-      render: (item: Finding) =>
-        item.due_date ? new Date(item.due_date).toLocaleDateString('es-ES') : '-',
+      key: 'is_resolved',
+      header: 'Resuelto',
+      render: (item: Finding) => {
+        const resolved = (item as unknown as Record<string, unknown>).is_resolved;
+        return resolved ? 'Si' : 'No';
+      },
     },
     {
       key: 'actions',

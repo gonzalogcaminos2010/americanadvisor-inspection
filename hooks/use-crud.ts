@@ -143,6 +143,22 @@ export function mapTemplateSectionsToApi(sections: Record<string, unknown>[]): R
 
 const inspectionTemplateFromApi = (data: Record<string, unknown>) => mapTemplateFromApi(data);
 
+const findingFromApi = (data: Record<string, unknown>) => ({
+  ...data,
+  title: data.title || data.description || '',
+  corrective_action: data.corrective_action || data.recommendation || '',
+  status: data.status || (data.is_resolved ? 'RESOLVED' : 'OPEN'),
+  due_date: data.due_date || null,
+});
+
+const inspectionFromApi = (data: Record<string, unknown>) => {
+  const woItem = data.work_order_item as Record<string, unknown> | undefined;
+  return {
+    ...data,
+    work_order_id: data.work_order_id || woItem?.work_order_id || '',
+  };
+};
+
 // Map of endpoint → { toApi, fromApi }
 const mappers: Record<string, { toApi?: (d: Record<string, unknown>) => unknown; fromApi?: (d: Record<string, unknown>) => unknown }> = {
   '/clients': { toApi: clientToApi, fromApi: clientFromApi },
@@ -150,6 +166,8 @@ const mappers: Record<string, { toApi?: (d: Record<string, unknown>) => unknown;
   '/inspection-requests': { toApi: inspectionRequestToApi, fromApi: inspectionRequestFromApi },
   '/work-orders': { toApi: workOrderToApi, fromApi: workOrderFromApi },
   '/inspection-templates': { fromApi: inspectionTemplateFromApi },
+  '/findings': { fromApi: findingFromApi },
+  '/inspections': { fromApi: inspectionFromApi },
 };
 
 // Normalize API paginated response to what frontend expects
