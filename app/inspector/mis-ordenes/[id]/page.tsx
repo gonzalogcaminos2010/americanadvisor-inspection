@@ -23,7 +23,6 @@ import type {
   WorkOrderItem,
   Inspection,
   ApiResponse,
-  PaginatedResponse,
 } from '@/types';
 
 export default function InspectorOrderDetailPage() {
@@ -47,12 +46,7 @@ export default function InspectorOrderDetailPage() {
     enabled: !!id,
   });
 
-  // Fetch inspections
-  const { data: inspectionsResponse } = useQuery<PaginatedResponse<Inspection> | ApiResponse<Inspection[]>>({
-    queryKey: ['work-order-inspections', id],
-    queryFn: () => api.get(`/inspections?work_order_id=${id}&per_page=50`),
-    enabled: !!id,
-  });
+  // Inspections now come embedded in items via API
 
   const workOrder = woResponse?.data;
   const rawItems = itemsResponse;
@@ -61,12 +55,7 @@ export default function InspectorOrderDetailPage() {
     : Array.isArray((rawItems as ApiResponse<WorkOrderItem[]>)?.data)
       ? (rawItems as ApiResponse<WorkOrderItem[]>).data
       : [];
-  const rawInsp = inspectionsResponse;
-  const inspections: Inspection[] = Array.isArray(rawInsp)
-    ? rawInsp
-    : Array.isArray((rawInsp as ApiResponse<Inspection[]>)?.data)
-      ? (rawInsp as ApiResponse<Inspection[]>).data
-      : [];
+  // Inspections now come embedded in items via API
 
   // Start work order
   const startMutation = useMutation({
@@ -237,21 +226,12 @@ export default function InspectorOrderDetailPage() {
             const isItemInProgress = itemStatus === 'in_progress';
             const isItemCompleted = itemStatus === 'completed';
 
-            // Find inspections for this item
-            const itemInspections = inspections.filter(
-              (i) => i.work_order_item_id === item.id
-            );
-            const relevantInspections = itemInspections.length > 0
-              ? itemInspections
-              : inspections.filter((i) => item.template_id && i.template_id === item.template_id);
-            const activeInsp = relevantInspections.find((i) => {
-              const s = i.status?.toLowerCase() || '';
-              return s === 'not_started' || s === 'in_progress' || s === 'standby' || s === 'returned';
-            });
-            const completedInsp = relevantInspections.find((i) => {
-              const s = i.status?.toLowerCase() || '';
-              return s === 'completed' || s === 'submitted';
-            });
+            // Get inspection directly from item (API now includes it)
+            const rawItem = item as unknown as Record<string, unknown>;
+            const itemInsp = (rawItem.inspection as Inspection) || null;
+            const inspStatus = itemInsp?.status?.toLowerCase() || '';
+            const activeInsp = (inspStatus === 'not_started' || inspStatus === 'in_progress' || inspStatus === 'standby' || inspStatus === 'returned') ? itemInsp : null;
+            const completedInsp = (inspStatus === 'completed' || inspStatus === 'submitted') ? itemInsp : null;
 
             return (
               <div key={item.id} className="px-6 py-4">
