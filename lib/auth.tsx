@@ -45,7 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(user));
     setToken(token);
     setUser(user);
-    router.push('/dashboard');
+    // Redirect based on role
+    if (user.role === 'inspector') {
+      router.push('/inspector/mis-ordenes');
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   const logout = async () => {

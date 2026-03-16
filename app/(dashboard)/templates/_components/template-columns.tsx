@@ -36,7 +36,7 @@ export function getTemplateColumns(
       key: 'sections_count',
       header: 'Secciones',
       render: (template: InspectionTemplate) => (
-        <span className="text-sm text-gray-600">{template.sections_count ?? 0}</span>
+        <span className="text-sm text-gray-600">{template.sections_count != null ? template.sections_count : '-'}</span>
       ),
     },
     {

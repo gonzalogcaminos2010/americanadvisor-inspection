@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { InspectionExecutor } from '@/components/inspection/inspection-executor';
-import { ArrowLeft, FileText, AlertTriangle, Camera, MapPin } from 'lucide-react';
+import { ArrowLeft, FileText, AlertTriangle, Camera, MapPin, CheckCircle, ShieldCheck } from 'lucide-react';
 
 type Tab = 'respuestas' | 'hallazgos' | 'fotos';
 
@@ -67,7 +67,7 @@ export default function InspectionDetailPage() {
   }
 
   const isActive = inspection.status === InspectionStatus.NOT_STARTED || inspection.status === InspectionStatus.IN_PROGRESS;
-  const isReadOnly = inspection.status === InspectionStatus.COMPLETED || inspection.status === InspectionStatus.SUBMITTED;
+  const isReadOnly = inspection.status === InspectionStatus.COMPLETED || inspection.status === InspectionStatus.SUBMITTED || inspection.status === InspectionStatus.APPROVED || inspection.status === InspectionStatus.RETURNED;
 
   const sections = inspection.template?.sections?.sort((a, b) => a.sort_order - b.sort_order) || [];
   const answers = inspection.answers || [];
@@ -123,6 +123,104 @@ export default function InspectionDetailPage() {
         <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg shadow px-4 py-3">
           <MapPin className="h-4 w-4" />
           <span>Ubicacion GPS: {inspection.gps_latitude.toFixed(6)}, {inspection.gps_longitude.toFixed(6)}</span>
+        </div>
+      )}
+
+      {/* Score & Result banner */}
+      {inspection.score != null && (
+        <div
+          className={`rounded-lg shadow px-6 py-4 flex items-center justify-between ${
+            inspection.overall_result === 'PASS'
+              ? 'bg-green-50 border border-green-200'
+              : inspection.overall_result === 'FAIL'
+              ? 'bg-red-50 border border-red-200'
+              : 'bg-yellow-50 border border-yellow-200'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <ShieldCheck
+              className={`h-6 w-6 ${
+                inspection.overall_result === 'PASS'
+                  ? 'text-green-600'
+                  : inspection.overall_result === 'FAIL'
+                  ? 'text-red-600'
+                  : 'text-yellow-600'
+              }`}
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-700">Puntaje de Inspeccion</p>
+              <p
+                className={`text-2xl font-bold ${
+                  inspection.overall_result === 'PASS'
+                    ? 'text-green-700'
+                    : inspection.overall_result === 'FAIL'
+                    ? 'text-red-700'
+                    : 'text-yellow-700'
+                }`}
+              >
+                {inspection.score}%
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-medium text-gray-500 uppercase">Resultado</p>
+            <p
+              className={`text-lg font-bold ${
+                inspection.overall_result === 'PASS'
+                  ? 'text-green-700'
+                  : inspection.overall_result === 'FAIL'
+                  ? 'text-red-700'
+                  : 'text-yellow-700'
+              }`}
+            >
+              {inspection.overall_result === 'PASS'
+                ? 'Aprobado'
+                : inspection.overall_result === 'FAIL'
+                ? 'Reprobado'
+                : inspection.overall_result === 'NEEDS_REVIEW'
+                ? 'Requiere Revision'
+                : inspection.overall_result ?? '-'}
+            </p>
+            {inspection.final_result && inspection.final_result !== inspection.overall_result && (
+              <p className="text-xs text-gray-500 mt-1">Resultado final: {inspection.final_result}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Approval info */}
+      {inspection.approved_by && (
+        <div className="bg-white rounded-lg shadow px-6 py-4">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                Aprobado por: {inspection.approver?.name ?? `Usuario #${inspection.approved_by}`}
+              </p>
+              {inspection.approved_at && (
+                <p className="text-xs text-gray-500">
+                  {new Date(inspection.approved_at).toLocaleString('es-ES')}
+                </p>
+              )}
+            </div>
+          </div>
+          {inspection.supervisor_notes && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs font-medium text-gray-500 uppercase">Notas del Supervisor</p>
+              <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{inspection.supervisor_notes}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Returned alert */}
+      {inspection.status === InspectionStatus.RETURNED && inspection.supervisor_notes && (
+        <div className="bg-red-50 border border-red-300 rounded-lg px-6 py-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-red-800">Inspeccion Devuelta</p>
+            <p className="text-sm text-red-700 mt-1 whitespace-pre-wrap">{inspection.supervisor_notes}</p>
+          </div>
         </div>
       )}
 

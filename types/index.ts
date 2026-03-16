@@ -61,6 +61,8 @@ export enum InspectionStatus {
   STANDBY = 'STANDBY',
   COMPLETED = 'COMPLETED',
   SUBMITTED = 'SUBMITTED',
+  APPROVED = 'APPROVED',
+  RETURNED = 'RETURNED',
 }
 
 export enum InspectionResult {
@@ -271,6 +273,12 @@ export interface Inspection {
   gps_latitude: number | null;
   gps_longitude: number | null;
   overall_result: InspectionResult | null;
+  score: number | null;
+  final_result: string | null;
+  approved_by: number | null;
+  approver?: User | null;
+  approved_at: string | null;
+  supervisor_notes: string | null;
   notes: string | null;
   signature_data: string | null;
   template?: InspectionTemplate;
