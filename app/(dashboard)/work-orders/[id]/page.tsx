@@ -274,18 +274,47 @@ export default function WorkOrderDetailPage() {
         </div>
       )}
 
-      {/* PENDING: Start button */}
+      {/* PENDING: Start button + equipment list */}
       {isPending && (
-        <div className="bg-white rounded-lg shadow p-6 text-center">
-          <Play className="h-12 w-12 text-blue-500 mx-auto mb-3" />
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Orden Pendiente</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Inicie la orden para comenzar las inspecciones de {items.length} equipo{items.length !== 1 ? 's' : ''}.
-          </p>
-          <Button onClick={() => startMutation.mutate()} isLoading={startMutation.isPending}>
-            <Play className="h-4 w-4 mr-2" />
-            Iniciar Orden
-          </Button>
+        <div className="space-y-4">
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <Play className="h-12 w-12 text-blue-500 mx-auto mb-3" />
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Orden Pendiente</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Inicie la orden para comenzar las inspecciones de {items.length} equipo{items.length !== 1 ? 's' : ''}.
+            </p>
+            <Button onClick={() => startMutation.mutate()} isLoading={startMutation.isPending}>
+              <Play className="h-4 w-4 mr-2" />
+              Iniciar Orden
+            </Button>
+          </div>
+          {items.length > 0 && (
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-blue-500" />
+                  Equipos a Inspeccionar
+                </h2>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {items.map((item) => (
+                  <div key={item.id} className="px-6 py-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                      <Truck className="h-5 w-5 text-yellow-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {item.equipment?.name ?? `Equipo #${item.equipment_id}`}
+                      </p>
+                      {item.template && (
+                        <span className="text-xs text-gray-500">{item.template.name}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -377,7 +406,7 @@ export default function WorkOrderDetailPage() {
                           Inspeccionar
                         </Button>
                       )}
-                      {isItemInProgress && activeInsp && (
+                      {isItemInProgress && activeInsp && !completedInsp && (
                         <Button
                           size="sm"
                           onClick={() => handleContinueInspection(activeInsp, item.equipment?.name ?? '')}
@@ -385,7 +414,7 @@ export default function WorkOrderDetailPage() {
                           Continuar
                         </Button>
                       )}
-                      {isItemCompleted && completedInsp && (
+                      {completedInsp && (
                         <Button
                           variant="secondary"
                           size="sm"
