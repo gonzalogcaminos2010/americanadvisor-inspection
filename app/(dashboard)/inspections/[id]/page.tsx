@@ -106,7 +106,7 @@ export default function InspectionDetailPage() {
         <InfoCard label="Inspector" value={inspection.inspector?.name ?? '-'} />
         <InfoCard
           label="Orden de Trabajo"
-          value={inspection.work_order?.order_number ?? String(inspection.work_order_id)}
+          value={inspection.work_order?.order_number || `OT #${(inspection as unknown as Record<string, unknown>).work_order_item_id || inspection.work_order_id || '-'}`}
         />
         <InfoCard
           label="Inicio"

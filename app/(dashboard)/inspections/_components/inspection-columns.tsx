@@ -15,12 +15,20 @@ export function getInspectionColumns(
     {
       key: 'work_order',
       header: 'Orden',
-      render: (item: Inspection) => item.work_order?.order_number ?? String(item.work_order_id),
+      render: (item: Inspection) => {
+        const raw = item as unknown as Record<string, unknown>;
+        const woItem = raw.work_order_item as Record<string, unknown> | undefined;
+        return item.work_order?.order_number || (woItem?.work_order_id ? `OT #${woItem.work_order_id}` : '-');
+      },
     },
     {
       key: 'equipment',
       header: 'Equipo',
-      render: (item: Inspection) => item.work_order?.equipment?.name ?? '-',
+      render: (item: Inspection) => {
+        const raw = item as unknown as Record<string, unknown>;
+        const equip = raw.equipment as Record<string, unknown> | undefined;
+        return equip?.name as string || item.work_order?.equipment?.name || '-';
+      },
     },
     {
       key: 'template',

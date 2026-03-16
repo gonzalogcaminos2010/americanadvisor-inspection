@@ -247,8 +247,14 @@ export default function InspectionRequestDetailPage() {
         <InfoCard
           icon={<Calendar className="h-5 w-5 text-orange-500" />}
           label="Fecha Solicitud"
-          value={new Date(request.request_date).toLocaleDateString('es-AR')}
-          subtitle={request.due_date ? `Límite: ${new Date(request.due_date).toLocaleDateString('es-AR')}` : undefined}
+          value={(() => {
+            const d = request.request_date || (request as unknown as Record<string, unknown>).requested_date as string;
+            return d ? new Date(d).toLocaleDateString('es-AR') : '-';
+          })()}
+          subtitle={(() => {
+            const d = request.due_date || (request as unknown as Record<string, unknown>).scheduled_date as string;
+            return d ? `Límite: ${new Date(d).toLocaleDateString('es-AR')}` : undefined;
+          })()}
         />
         <InfoCard
           icon={<User className="h-5 w-5 text-purple-500" />}
