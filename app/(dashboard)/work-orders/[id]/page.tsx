@@ -9,8 +9,6 @@ import {
   WorkOrderItem,
   Inspection,
   InspectionTemplate,
-  InspectionStatus,
-  WorkOrderStatus,
   ApiResponse,
   PaginatedResponse,
 } from '@/types';
@@ -135,7 +133,8 @@ export default function WorkOrderDetailPage() {
   });
 
   const handleStartInspection = (item: WorkOrderItem) => {
-    const templateId = item.template_id ?? workOrder?.template_id;
+    const raw = item as unknown as Record<string, unknown>;
+    const templateId = item.template_id ?? (raw.inspection_template_id as number) ?? workOrder?.template_id;
     if (!templateId) {
       // No template pre-assigned — show picker
       setTemplatePickerItem(item);
@@ -210,13 +209,17 @@ export default function WorkOrderDetailPage() {
     );
   }
 
-  const isPending = workOrder.status === WorkOrderStatus.PENDING;
-  const isInProgress = workOrder.status === WorkOrderStatus.IN_PROGRESS;
-  const isCompleted = workOrder.status === WorkOrderStatus.COMPLETED;
-  const isCancelled = workOrder.status === WorkOrderStatus.CANCELLED;
+  const status = workOrder.status?.toLowerCase() || '';
+  const isPending = status === 'pending';
+  const isInProgress = status === 'in_progress';
+  const isCompleted = status === 'completed';
+  const isCancelled = status === 'cancelled';
 
   // Check if all items are completed
-  const allItemsCompleted = items.length > 0 && items.every((i) => i.status === 'COMPLETED' || i.status === 'SKIPPED');
+  const allItemsCompleted = items.length > 0 && items.every((i) => {
+    const s = i.status?.toLowerCase() || '';
+    return s === 'completed' || s === 'skipped';
+  });
 
   return (
     <div className="space-y-6">
@@ -304,10 +307,11 @@ export default function WorkOrderDetailPage() {
 
           <div className="divide-y divide-gray-100">
             {items.map((item) => {
-              const isItemPending = item.status === 'PENDING';
-              const isItemInProgress = item.status === 'IN_PROGRESS';
-              const isItemCompleted = item.status === 'COMPLETED';
-              const isItemSkipped = item.status === 'SKIPPED';
+              const itemStatus = item.status?.toLowerCase() || '';
+              const isItemPending = itemStatus === 'pending';
+              const isItemInProgress = itemStatus === 'in_progress';
+              const isItemCompleted = itemStatus === 'completed';
+              const isItemSkipped = itemStatus === 'skipped';
 
               // Find inspection associated with this specific item
               const itemInspections = inspections.filter(
@@ -318,10 +322,16 @@ export default function WorkOrderDetailPage() {
                 ? itemInspections
                 : inspections.filter((i) => item.template_id && i.template_id === item.template_id);
               const activeInsp = relevantInspections.find(
-                (i) => i.status === InspectionStatus.NOT_STARTED || i.status === InspectionStatus.IN_PROGRESS || i.status === InspectionStatus.STANDBY
+                (i) => {
+                  const s = i.status?.toLowerCase() || '';
+                  return s === 'not_started' || s === 'in_progress' || s === 'standby';
+                }
               );
               const completedInsp = relevantInspections.find(
-                (i) => i.status === InspectionStatus.COMPLETED || i.status === InspectionStatus.SUBMITTED
+                (i) => {
+                  const s = i.status?.toLowerCase() || '';
+                  return s === 'completed' || s === 'submitted';
+                }
               );
 
               return (
