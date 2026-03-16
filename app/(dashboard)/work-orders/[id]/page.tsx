@@ -114,7 +114,7 @@ export default function WorkOrderDetailPage() {
   // Create inspection for an item
   const createInspectionMutation = useMutation({
     mutationFn: (data: { work_order_item_id: number; template_id?: number }) =>
-      api.post<ApiResponse<Inspection>>(`/work-orders/${id}/inspections`, data),
+      api.post<ApiResponse<Inspection>>(`/inspections`, { work_order_item_id: data.work_order_item_id }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['work-order-inspections', id] });
       queryClient.invalidateQueries({ queryKey: ['work-order-items', id] });
