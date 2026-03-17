@@ -281,6 +281,13 @@ export interface Inspection {
   supervisor_notes: string | null;
   notes: string | null;
   signature_data: string | null;
+  inspector_signature: string | null;
+  inspector_signed_at: string | null;
+  supervisor_signature: string | null;
+  supervisor_signed_at: string | null;
+  client_signature: string | null;
+  client_signed_at: string | null;
+  all_signatures_complete: boolean;
   template?: InspectionTemplate;
   work_order?: WorkOrder;
   inspector?: User;

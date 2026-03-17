@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { InspectionExecutor } from '@/components/inspection/inspection-executor';
+import { SignatureSection } from '@/components/inspection/signature-section';
 import { ArrowLeft, FileText, AlertTriangle, Camera, MapPin, CheckCircle, ShieldCheck } from 'lucide-react';
 
 type Tab = 'respuestas' | 'hallazgos' | 'fotos';
@@ -223,6 +224,9 @@ export default function InspectionDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Signatures */}
+      <SignatureSection inspection={inspection} />
 
       {/* Active inspection: show executor */}
       {isActive && (
