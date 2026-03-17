@@ -262,14 +262,14 @@ export default function InspectorOrderDetailPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {isInProgress && isItemPending && (
+                    {isInProgress && (isItemPending || (isItemInProgress && !activeInsp && !completedInsp)) && (
                       <Button
                         size="sm"
                         onClick={() => handleStartInspection(item)}
                         isLoading={createInspectionMutation.isPending}
                       >
                         <Play className="h-3 w-3 mr-1" />
-                        Iniciar Inspeccion
+                        {isItemPending ? 'Iniciar Inspeccion' : 'Crear Inspeccion'}
                       </Button>
                     )}
                     {isItemInProgress && activeInsp && (
