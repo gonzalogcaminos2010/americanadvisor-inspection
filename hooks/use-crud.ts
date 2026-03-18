@@ -94,11 +94,18 @@ const workOrderFromApi = (data: Record<string, unknown>) => ({
 // API returns: section.name, section.order, question.text, question.type, question.order
 // Frontend expects: section.title, section.sort_order, question.question_text, question.question_type, question.sort_order
 
+// Map API question type values to frontend QuestionType enum values
+const QUESTION_TYPE_MAP: Record<string, string> = {
+  select: 'multiple_choice',
+};
+
 function mapQuestionFromApi(q: Record<string, unknown>): Record<string, unknown> {
+  const rawType = String(q.question_type || q.type || 'text');
+  const mappedType = QUESTION_TYPE_MAP[rawType] || rawType;
   return {
     ...q,
     question_text: q.question_text || q.text || '',
-    question_type: q.question_type || q.type || 'text',
+    question_type: mappedType,
     sort_order: q.sort_order ?? q.order ?? 0,
   };
 }
