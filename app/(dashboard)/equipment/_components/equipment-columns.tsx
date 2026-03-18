@@ -21,6 +21,19 @@ export function getEquipmentColumns(
     { key: 'model', header: 'Modelo' },
     { key: 'serial_number', header: 'N\u00b0 Serie' },
     {
+      key: 'metadata',
+      header: 'Campos Adic.',
+      render: (item: Equipment) => {
+        const meta = item.metadata;
+        if (!meta || Object.keys(meta).length === 0) return '-';
+        return (
+          <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+            {Object.keys(meta).length}
+          </span>
+        );
+      },
+    },
+    {
       key: 'status',
       header: 'Estado',
       render: (item: Equipment) => <Badge status={item.status} />,

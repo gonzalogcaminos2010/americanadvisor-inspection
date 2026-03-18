@@ -5,7 +5,10 @@ import { CheckCircle, XCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast';
+import { getInspectionReportPreview } from '@/lib/api';
 import { SignaturePad } from './signature-pad';
+import { InspectionReportPreview } from './inspection-report-preview';
 import type { Inspection, AnswerSubmission } from '@/types';
 import type { SectionProgress } from '@/hooks/use-inspection';
 
@@ -26,6 +29,11 @@ export function InspectionSummary({ sectionProgress, answers, inspection, onSubm
       : null
   );
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const hasFails = sectionProgress.some((s) => s.hasFails);
   const flaggedAnswers = Array.from(answers.values()).filter((a) => a.is_flagged);
@@ -45,13 +53,41 @@ export function InspectionSummary({ sectionProgress, answers, inspection, onSubm
     );
   };
 
-  const handleSubmit = () => {
+  const handleEnviarClick = async () => {
+    setShowPreview(true);
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const url = await getInspectionReportPreview(inspection.id);
+      setPreviewUrl(url);
+    } catch {
+      setPreviewError('No se pudo generar el preview del informe. Puede continuar con el envio.');
+      toast.error('Error al generar preview del informe');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleConfirmSubmit = async () => {
     onSubmit({
       signature_data: signature || undefined,
       gps_latitude: gps?.lat,
       gps_longitude: gps?.lng,
       notes: notes || undefined,
     });
+    setShowPreview(false);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  };
+
+  const handleClosePreview = () => {
+    setShowPreview(false);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
   };
 
   return (
@@ -157,7 +193,7 @@ export function InspectionSummary({ sectionProgress, answers, inspection, onSubm
       {/* Submit */}
       <div className="border-t border-gray-200 pt-4">
         <Button
-          onClick={handleSubmit}
+          onClick={handleEnviarClick}
           isLoading={isSubmitting}
           size="lg"
           className="w-full"
@@ -165,6 +201,16 @@ export function InspectionSummary({ sectionProgress, answers, inspection, onSubm
           Enviar Inspeccion
         </Button>
       </div>
+
+      {/* Report Preview */}
+      <InspectionReportPreview
+        open={showPreview}
+        onClose={handleClosePreview}
+        onConfirmSubmit={handleConfirmSubmit}
+        pdfUrl={previewUrl}
+        loading={previewLoading}
+        error={previewError}
+      />
     </div>
   );
 }

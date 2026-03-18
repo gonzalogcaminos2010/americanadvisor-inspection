@@ -124,6 +124,7 @@ export interface Equipment {
   next_inspection_date: string | null;
   notes: string | null;
   active: boolean;
+  metadata: Record<string, string> | null;
   created_at: string;
   updated_at: string;
   client?: Client;
@@ -379,6 +380,7 @@ export interface EquipmentFormData {
   location?: string;
   status: EquipmentStatus;
   notes?: string;
+  metadata?: Record<string, string>;
 }
 
 export interface InspectionRequestFormData {

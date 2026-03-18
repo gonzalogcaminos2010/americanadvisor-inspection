@@ -37,6 +37,7 @@ const equipmentToApi = (data: Record<string, unknown>) => ({
   serial_number: data.serial_number,
   internal_code: data.equipment_code || data.internal_code,
   status: data.status ? String(data.status).toLowerCase() : 'active',
+  metadata: data.metadata || undefined,
 });
 
 const equipmentFromApi = (data: Record<string, unknown>) => ({
@@ -46,6 +47,7 @@ const equipmentFromApi = (data: Record<string, unknown>) => ({
   description: '',
   status: data.status ? String(data.status).toUpperCase() : 'ACTIVE',
   active: data.status === 'active',
+  metadata: data.metadata || null,
 });
 
 const inspectionRequestToApi = (data: Record<string, unknown>) => ({

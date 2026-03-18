@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
+import { PaginatedResponse, Inspection } from '@/types';
 import {
   LayoutDashboard,
   Users,
@@ -16,9 +19,23 @@ import {
   LogOut,
   Menu,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 
-const navGroups = [
+interface NavItem {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  roles?: string[];
+  badge?: number;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const baseNavGroups: NavGroup[] = [
   {
     label: 'GESTIÓN',
     items: [
@@ -39,6 +56,7 @@ const navGroups = [
     items: [
       { label: 'Plantillas', href: '/templates', icon: FileText },
       { label: 'Inspecciones', href: '/inspections', icon: ClipboardCheck },
+      { label: 'Revisiones Pendientes', href: '/revisiones', icon: ShieldCheck, roles: ['supervisor', 'admin'] },
       { label: 'Hallazgos', href: '/findings', icon: AlertTriangle },
     ],
   },
@@ -48,6 +66,33 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
+
+  const { data: submittedCount } = useQuery<number>({
+    queryKey: ['inspections-submitted-count'],
+    queryFn: async () => {
+      const res = await api.get<PaginatedResponse<Inspection>>('/inspections?status=SUBMITTED&per_page=1');
+      return res.meta?.total ?? 0;
+    },
+    enabled: isSupervisorOrAdmin,
+    refetchInterval: 60000,
+  });
+
+  const navGroups = baseNavGroups.map((group) => ({
+    ...group,
+    items: group.items
+      .filter((item) => {
+        if (!item.roles) return true;
+        return user?.role && item.roles.includes(user.role);
+      })
+      .map((item) => {
+        if (item.href === '/revisiones' && submittedCount != null) {
+          return { ...item, badge: submittedCount };
+        }
+        return item;
+      }),
+  }));
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -81,6 +126,11 @@ export function Sidebar() {
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     {item.label}
+                    {item.badge != null && item.badge > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold min-w-[20px] h-5 px-1.5">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

@@ -23,6 +23,7 @@ import type {
   WorkOrderItem,
   Inspection,
   ApiResponse,
+  PaginatedResponse,
 } from '@/types';
 
 export default function InspectorOrderDetailPage() {
@@ -46,7 +47,12 @@ export default function InspectorOrderDetailPage() {
     enabled: !!id,
   });
 
-  // Inspections now come embedded in items via API
+  // Fetch inspections separately (API does not embed them in items)
+  const { data: inspectionsResponse, isLoading: inspectionsLoading } = useQuery<PaginatedResponse<Inspection>>({
+    queryKey: ['work-order-inspections', id],
+    queryFn: () => api.get(`/inspections?work_order_id=${id}&per_page=100`),
+    enabled: !!id,
+  });
 
   const workOrder = woResponse?.data;
   const rawItems = itemsResponse;
@@ -55,7 +61,18 @@ export default function InspectorOrderDetailPage() {
     : Array.isArray((rawItems as ApiResponse<WorkOrderItem[]>)?.data)
       ? (rawItems as ApiResponse<WorkOrderItem[]>).data
       : [];
-  // Inspections now come embedded in items via API
+  // Build inspection map by work_order_item_id
+  const inspectionsList: Inspection[] = inspectionsResponse?.data ?? [];
+  const inspectionsByItemId = new Map<number, Inspection>();
+  inspectionsList.forEach((insp) => {
+    const itemId = insp.work_order_item_id;
+    if (itemId) {
+      const existing = inspectionsByItemId.get(itemId);
+      if (!existing || insp.id > existing.id) {
+        inspectionsByItemId.set(itemId, insp);
+      }
+    }
+  });
 
   // Start work order
   const startMutation = useMutation({
@@ -101,7 +118,7 @@ export default function InspectorOrderDetailPage() {
     },
   });
 
-  if (woLoading || itemsLoading) {
+  if (woLoading || itemsLoading || inspectionsLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Spinner size="lg" />
@@ -226,12 +243,11 @@ export default function InspectorOrderDetailPage() {
             const isItemInProgress = itemStatus === 'in_progress';
             const isItemCompleted = itemStatus === 'completed';
 
-            // Get inspection directly from item (API now includes it)
-            const rawItem = item as unknown as Record<string, unknown>;
-            const itemInsp = (rawItem.inspection as Inspection) || null;
+            // Get inspection from the separate inspections query
+            const itemInsp = inspectionsByItemId.get(item.id) || null;
             const inspStatus = itemInsp?.status?.toLowerCase() || '';
             const activeInsp = (inspStatus === 'not_started' || inspStatus === 'in_progress' || inspStatus === 'standby' || inspStatus === 'returned') ? itemInsp : null;
-            const completedInsp = (inspStatus === 'completed' || inspStatus === 'submitted') ? itemInsp : null;
+            const completedInsp = (inspStatus === 'completed' || inspStatus === 'submitted' || inspStatus === 'approved') ? itemInsp : null;
 
             return (
               <div key={item.id} className="px-6 py-4">
@@ -262,7 +278,7 @@ export default function InspectorOrderDetailPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {isInProgress && (isItemPending || (isItemInProgress && !activeInsp && !completedInsp)) && (
+                    {isInProgress && !itemInsp && (isItemPending || isItemInProgress) && (
                       <Button
                         size="sm"
                         onClick={() => handleStartInspection(item)}
@@ -272,7 +288,7 @@ export default function InspectorOrderDetailPage() {
                         {isItemPending ? 'Iniciar Inspeccion' : 'Crear Inspeccion'}
                       </Button>
                     )}
-                    {isItemInProgress && activeInsp && (
+                    {activeInsp && (
                       <Button
                         size="sm"
                         onClick={() => router.push(`/inspector/mis-inspecciones/${activeInsp.id}`)}
@@ -280,7 +296,7 @@ export default function InspectorOrderDetailPage() {
                         Continuar
                       </Button>
                     )}
-                    {isItemCompleted && completedInsp && (
+                    {completedInsp && (
                       <Button
                         variant="secondary"
                         size="sm"

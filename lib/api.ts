@@ -98,3 +98,45 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
+
+export async function getInspectionReportPreview(inspectionId: number): Promise<string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+  const response = await fetch(
+    `${API_URL}/inspections/${inspectionId}/report/preview`,
+    {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Accept: 'application/pdf',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Error al generar preview del informe');
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
+export async function getInspectionReport(inspectionId: number): Promise<string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+  const response = await fetch(
+    `${API_URL}/inspections/${inspectionId}/report`,
+    {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Accept: 'application/pdf',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Error al obtener el informe');
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}

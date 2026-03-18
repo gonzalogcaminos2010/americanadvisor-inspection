@@ -57,7 +57,12 @@ export default function WorkOrderDetailPage() {
     enabled: !!id,
   });
 
-  // Inspections now come embedded in items via API
+  // Fetch inspections for this work order (API does not embed them in items)
+  const { data: inspectionsResponse, isLoading: inspectionsLoading } = useQuery<PaginatedResponse<Inspection>>({
+    queryKey: ['work-order-inspections', id],
+    queryFn: () => api.get(`/inspections?work_order_id=${id}&per_page=100`),
+    enabled: !!id,
+  });
 
   // Fetch active templates (for template picker when item has no template)
   const { data: templatesResponse } = useQuery<PaginatedResponse<InspectionTemplate>>({
@@ -73,10 +78,19 @@ export default function WorkOrderDetailPage() {
     : Array.isArray((rawItems as ApiResponse<WorkOrderItem[]>)?.data)
       ? (rawItems as ApiResponse<WorkOrderItem[]>).data
       : [];
-  // Extract inspections from items for the completed view
-  const inspections: Inspection[] = items
-    .map((i) => (i as unknown as Record<string, unknown>).inspection as Inspection)
-    .filter(Boolean);
+  // Build inspections list and a map by work_order_item_id
+  const inspections: Inspection[] = inspectionsResponse?.data ?? [];
+  const inspectionsByItemId = new Map<number, Inspection>();
+  inspections.forEach((insp) => {
+    const itemId = insp.work_order_item_id;
+    if (itemId) {
+      // Keep the most recent inspection per item
+      const existing = inspectionsByItemId.get(itemId);
+      if (!existing || insp.id > existing.id) {
+        inspectionsByItemId.set(itemId, insp);
+      }
+    }
+  });
 
   // Start work order
   const startMutation = useMutation({
@@ -156,7 +170,7 @@ export default function WorkOrderDetailPage() {
     setShowExecutor(true);
   };
 
-  if (woLoading || itemsLoading) {
+  if (woLoading || itemsLoading || inspectionsLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Spinner size="lg" />
@@ -335,12 +349,11 @@ export default function WorkOrderDetailPage() {
               const isItemCompleted = itemStatus === 'completed';
               const isItemSkipped = itemStatus === 'skipped';
 
-              // Get inspection directly from item (API now includes it)
-              const rawItem = item as unknown as Record<string, unknown>;
-              const itemInsp = (rawItem.inspection as Inspection) || null;
+              // Get inspection from the separate inspections query
+              const itemInsp = inspectionsByItemId.get(item.id) || null;
               const inspStatus = itemInsp?.status?.toLowerCase() || '';
-              const activeInsp = (inspStatus === 'not_started' || inspStatus === 'in_progress' || inspStatus === 'standby') ? itemInsp : null;
-              const completedInsp = (inspStatus === 'completed' || inspStatus === 'submitted') ? itemInsp : null;
+              const activeInsp = (inspStatus === 'not_started' || inspStatus === 'in_progress' || inspStatus === 'standby' || inspStatus === 'returned') ? itemInsp : null;
+              const completedInsp = (inspStatus === 'completed' || inspStatus === 'submitted' || inspStatus === 'approved') ? itemInsp : null;
 
               return (
                 <div key={item.id} className="px-6 py-4">
@@ -375,7 +388,7 @@ export default function WorkOrderDetailPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {(isItemPending || (isItemInProgress && !activeInsp && !completedInsp)) && (
+                      {!itemInsp && (isItemPending || isItemInProgress) && (
                         <Button
                           size="sm"
                           onClick={() => handleStartInspection(item)}
@@ -385,7 +398,7 @@ export default function WorkOrderDetailPage() {
                           {isItemPending ? 'Inspeccionar' : 'Iniciar Inspeccion'}
                         </Button>
                       )}
-                      {isItemInProgress && activeInsp && !completedInsp && (
+                      {activeInsp && (
                         <Button
                           size="sm"
                           onClick={() => handleContinueInspection(activeInsp, item.equipment?.name ?? '')}

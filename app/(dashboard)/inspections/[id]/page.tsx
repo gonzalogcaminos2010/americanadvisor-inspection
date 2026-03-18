@@ -3,8 +3,10 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/lib/auth';
+import { api, getInspectionReport } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 import {
   Inspection,
   ApiResponse,
@@ -21,15 +23,20 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { InspectionExecutor } from '@/components/inspection/inspection-executor';
 import { SignatureSection } from '@/components/inspection/signature-section';
-import { ArrowLeft, FileText, AlertTriangle, Camera, MapPin, CheckCircle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, FileText, AlertTriangle, Camera, MapPin, CheckCircle, ShieldCheck, RotateCcw } from 'lucide-react';
 
 type Tab = 'respuestas' | 'hallazgos' | 'fotos';
 
 export default function InspectionDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const id = params.id as string;
   const [activeTab, setActiveTab] = useState<Tab>('respuestas');
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
 
   const { data: response, isLoading } = useQuery<ApiResponse<Inspection>>({
     queryKey: ['inspection', id],
@@ -69,6 +76,8 @@ export default function InspectionDetailPage() {
 
   const isActive = inspection.status === InspectionStatus.NOT_STARTED || inspection.status === InspectionStatus.IN_PROGRESS;
   const isReadOnly = inspection.status === InspectionStatus.COMPLETED || inspection.status === InspectionStatus.SUBMITTED || inspection.status === InspectionStatus.APPROVED || inspection.status === InspectionStatus.RETURNED;
+  const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
+  const canReview = inspection.status === InspectionStatus.SUBMITTED && isSupervisorOrAdmin;
 
   const sections = inspection.template?.sections?.sort((a, b) => a.sort_order - b.sort_order) || [];
   const answers = inspection.answers || [];
@@ -298,15 +307,83 @@ export default function InspectionDetailPage() {
         </>
       )}
 
+      {/* Supervisor action buttons */}
+      {canReview && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-6 py-4">
+          <p className="text-sm font-semibold text-amber-800 mb-3">Acciones de Supervisor</p>
+          <div className="flex gap-3">
+            <Button
+              variant="primary"
+              onClick={() => setShowApproveModal(true)}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Aprobar
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setShowReturnModal(true)}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Devolver
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Action buttons */}
       <div className="flex gap-3">
         <Button variant="secondary" onClick={() => router.push('/inspections')}>
           Volver
         </Button>
-        <Button variant="primary" disabled>
-          Generar Reporte
-        </Button>
+        {(inspection.status === InspectionStatus.COMPLETED ||
+          inspection.status === InspectionStatus.SUBMITTED ||
+          inspection.status === InspectionStatus.APPROVED) && (
+          <Button
+            variant="primary"
+            onClick={async () => {
+              try {
+                const url = await getInspectionReport(inspection.id);
+                window.open(url, '_blank');
+              } catch {
+                toast.error('Error al obtener el informe');
+              }
+            }}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Descargar Informe
+          </Button>
+        )}
       </div>
+
+      {/* Approve Modal */}
+      {showApproveModal && (
+        <ApproveModal
+          inspectionId={inspection.id}
+          onClose={() => setShowApproveModal(false)}
+          onSuccess={() => {
+            setShowApproveModal(false);
+            queryClient.invalidateQueries({ queryKey: ['inspection', id] });
+            queryClient.invalidateQueries({ queryKey: ['inspections-submitted-count'] });
+            queryClient.invalidateQueries({ queryKey: ['inspections'] });
+            toast.success('Inspeccion aprobada exitosamente');
+          }}
+        />
+      )}
+
+      {/* Return Modal */}
+      {showReturnModal && (
+        <ReturnModal
+          inspectionId={inspection.id}
+          onClose={() => setShowReturnModal(false)}
+          onSuccess={() => {
+            setShowReturnModal(false);
+            queryClient.invalidateQueries({ queryKey: ['inspection', id] });
+            queryClient.invalidateQueries({ queryKey: ['inspections-submitted-count'] });
+            queryClient.invalidateQueries({ queryKey: ['inspections'] });
+            toast.success('Inspeccion devuelta al inspector');
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -510,6 +587,153 @@ function PhotosTab({ photos }: { photos: InspectionPhoto[] }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function ApproveModal({
+  inspectionId,
+  onClose,
+  onSuccess,
+}: {
+  inspectionId: number;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [finalResult, setFinalResult] = useState('approved');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleApprove = async () => {
+    setLoading(true);
+    try {
+      await api.post(`/inspections/${inspectionId}/approve`, {
+        final_result: finalResult,
+        supervisor_notes: notes || undefined,
+      });
+      onSuccess();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al aprobar la inspeccion';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Aprobar Inspeccion</h3>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Resultado Final
+            </label>
+            <select
+              value={finalResult}
+              onChange={(e) => setFinalResult(e.target.value)}
+              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="approved">Aprobado</option>
+              <option value="conditionally_approved">Aprobado con Condiciones</option>
+              <option value="rejected">Rechazado</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notas del Supervisor (opcional)
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Agregar notas o comentarios..."
+              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={handleApprove} disabled={loading}>
+            {loading ? 'Aprobando...' : 'Confirmar Aprobacion'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReturnModal({
+  inspectionId,
+  onClose,
+  onSuccess,
+}: {
+  inspectionId: number;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleReturn = async () => {
+    if (!notes.trim()) {
+      toast.error('Las notas son requeridas para devolver una inspeccion');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/inspections/${inspectionId}/return`, {
+        supervisor_notes: notes,
+      });
+      onSuccess();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al devolver la inspeccion';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Devolver Inspeccion</h3>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Motivo de devolucion <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={4}
+            placeholder="Describa el motivo por el cual se devuelve la inspeccion..."
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleReturn}
+            disabled={loading || !notes.trim()}
+          >
+            {loading ? 'Devolviendo...' : 'Confirmar Devolucion'}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

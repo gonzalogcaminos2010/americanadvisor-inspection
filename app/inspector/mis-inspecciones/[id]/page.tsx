@@ -16,10 +16,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Badge } from '@/components/ui/badge';
-import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { getInspectionReportPreview } from '@/lib/api';
 import { useInspection } from '@/hooks/use-inspection';
+import { InspectionReportPreview } from '@/components/inspection/inspection-report-preview';
 import type { TemplateQuestion, AnswerSubmission } from '@/types';
 
 export default function InspectorInspectionExecutorPage() {
@@ -49,26 +50,60 @@ export default function InspectorInspectionExecutorPage() {
   } = useInspection(inspectionId);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = useCallback(() => {
+  const handleEnviarClick = useCallback(async () => {
     syncAnswers();
-    submitMutation.mutate(
-      {},
-      {
-        onSuccess: () => {
-          toast.success('Inspeccion enviada exitosamente');
-          setSubmitted(true);
-          setShowSubmitModal(false);
-        },
-        onError: (err: unknown) => {
-          const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
-          toast.error(axiosErr?.response?.data?.message || axiosErr?.message || 'Error al enviar la inspeccion');
-        },
-      }
-    );
-  }, [syncAnswers, submitMutation, toast]);
+    setShowPreview(true);
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const url = await getInspectionReportPreview(inspectionId);
+      setPreviewUrl(url);
+    } catch {
+      setPreviewError('No se pudo generar el preview del informe. Puede continuar con el envio.');
+      toast.error('Error al generar preview del informe');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [syncAnswers, inspectionId, toast]);
+
+  const handleConfirmSubmit = useCallback(async () => {
+    return new Promise<void>((resolve) => {
+      submitMutation.mutate(
+        {},
+        {
+          onSuccess: () => {
+            toast.success('Inspeccion enviada exitosamente');
+            setSubmitted(true);
+            setShowPreview(false);
+            if (previewUrl) {
+              URL.revokeObjectURL(previewUrl);
+              setPreviewUrl(null);
+            }
+            resolve();
+          },
+          onError: (err: unknown) => {
+            const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+            toast.error(axiosErr?.response?.data?.message || axiosErr?.message || 'Error al enviar la inspeccion');
+            resolve();
+          },
+        }
+      );
+    });
+  }, [submitMutation, toast, previewUrl]);
+
+  const handleClosePreview = useCallback(() => {
+    setShowPreview(false);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  }, [previewUrl]);
 
   if (isLoading) {
     return (
@@ -315,10 +350,7 @@ export default function InspectorInspectionExecutorPage() {
 
               {isLastSection ? (
                 <Button
-                  onClick={() => {
-                    syncAnswers();
-                    setShowSubmitModal(true);
-                  }}
+                  onClick={handleEnviarClick}
                 >
                   Enviar Inspeccion
                 </Button>
@@ -338,47 +370,15 @@ export default function InspectorInspectionExecutorPage() {
         </main>
       </div>
 
-      {/* Submit confirmation modal */}
-      <Modal
-        isOpen={showSubmitModal}
-        onClose={() => setShowSubmitModal(false)}
-        title="Enviar Inspeccion"
-        size="md"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Esta a punto de enviar esta inspeccion para revision.
-          </p>
-
-          <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-            <p className="text-sm font-medium text-gray-900">Resumen:</p>
-            <p className="text-sm text-gray-600">
-              {totalAnswered} de {totalQuestions} preguntas respondidas
-            </p>
-            <p className="text-sm text-gray-600">
-              {sectionProgress.filter(s => s.answered === s.total && s.total > 0).length} de {sections.length} secciones completas
-            </p>
-            {sectionProgress.some(s => s.hasFails) && (
-              <p className="text-sm text-red-600 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Hay respuestas marcadas como fallo
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              isLoading={submitMutation.isPending}
-            >
-              Confirmar y Enviar
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Report Preview */}
+      <InspectionReportPreview
+        open={showPreview}
+        onClose={handleClosePreview}
+        onConfirmSubmit={handleConfirmSubmit}
+        pdfUrl={previewUrl}
+        loading={previewLoading}
+        error={previewError}
+      />
     </div>
   );
 }

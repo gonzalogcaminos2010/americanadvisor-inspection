@@ -61,13 +61,18 @@ export function useInspection(inspectionId: number | null) {
   const currentSection = sections[currentSectionIndex];
 
   // Initialize answers from existing data
+  // API returns template_question_id and answer_text; frontend uses question_id and answer_value
   useEffect(() => {
     if (inspection?.answers && answers.size === 0) {
       const map = new Map<number, AnswerSubmission>();
       inspection.answers.forEach((a: InspectionAnswer) => {
-        map.set(a.question_id, {
-          question_id: a.question_id,
-          answer_value: a.answer_value || undefined,
+        const raw = a as unknown as Record<string, unknown>;
+        const qId = a.question_id || (raw.template_question_id as number);
+        const answerValue = a.answer_value || (raw.answer_text as string) || undefined;
+        if (!qId) return;
+        map.set(qId, {
+          question_id: qId,
+          answer_value: answerValue,
           answer_number: a.answer_number ?? undefined,
           answer_boolean: a.answer_boolean ?? undefined,
           is_flagged: a.is_flagged,
@@ -120,9 +125,19 @@ export function useInspection(inspectionId: number | null) {
   }, [answers]);
 
   // Batch save answers
+  // Map frontend field names to API field names before sending
   const saveAnswersMutation = useMutation<ApiResponse<InspectionAnswer[]>, Error, AnswerSubmission[]>({
-    mutationFn: (answersBatch) =>
-      api.post(`/inspections/${inspectionId}/answers`, { answers: answersBatch }),
+    mutationFn: (answersBatch) => {
+      const mapped = answersBatch.map((a) => ({
+        template_question_id: a.question_id,
+        answer_text: a.answer_value ?? undefined,
+        answer_boolean: a.answer_boolean,
+        answer_number: a.answer_number,
+        is_flagged: a.is_flagged,
+        notes: a.notes,
+      }));
+      return api.post(`/inspections/${inspectionId}/answers`, { answers: mapped });
+    },
     onSuccess: () => {
       setPendingSync(false);
       queryClient.invalidateQueries({ queryKey: ['inspection', inspectionId] });
