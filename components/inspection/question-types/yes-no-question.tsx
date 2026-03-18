@@ -11,8 +11,12 @@ interface YesNoQuestionProps {
 export function YesNoQuestion({ value, onChange, failValues }: YesNoQuestionProps) {
   const isFail = (val: boolean) => {
     if (!failValues || failValues.length === 0) return false;
-    const strVal = val ? 'true' : 'false';
-    return failValues.includes(strVal) || failValues.includes(val ? 'si' : 'no') || failValues.includes(val ? 'Sí' : 'No');
+    // API uses "0" for No/false and "1" for Si/true
+    // Also handle legacy formats: "true"/"false", "si"/"no", "Sí"/"No"
+    const checks = val
+      ? ['1', 'true', 'si', 'Sí']
+      : ['0', 'false', 'no', 'No'];
+    return checks.some((c) => failValues.includes(c));
   };
 
   return (

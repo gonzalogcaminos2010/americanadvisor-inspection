@@ -38,8 +38,14 @@ export function QuestionRenderer({
 
   const checkFail = (value: string | boolean) => {
     if (!question.fail_values || question.fail_values.length === 0) return false;
-    const strVal = typeof value === 'boolean' ? (value ? 'true' : 'false') : value;
-    return question.fail_values.includes(strVal);
+    if (typeof value === 'boolean') {
+      // API uses "0" for false/No, "1" for true/Si
+      const checks = value
+        ? ['1', 'true', 'si', 'Sí']
+        : ['0', 'false', 'no', 'No'];
+      return checks.some((c) => question.fail_values!.includes(c));
+    }
+    return question.fail_values.includes(value);
   };
 
   const handleAnswer = (submission: Partial<AnswerSubmission>) => {

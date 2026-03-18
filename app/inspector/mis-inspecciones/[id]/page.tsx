@@ -417,7 +417,7 @@ function QuestionField({ question, answer, onAnswer }: QuestionFieldProps) {
           <button
             type="button"
             onClick={() => {
-              const isFlagged = question.fail_values?.includes('true') || question.fail_values?.includes('si') || false;
+              const isFlagged = ['1', 'true', 'si', 'Sí'].some(v => question.fail_values?.includes(v)) || false;
               onAnswer({ answer_boolean: true, answer_value: 'true', is_flagged: isFlagged });
             }}
             className={cn(
@@ -432,7 +432,7 @@ function QuestionField({ question, answer, onAnswer }: QuestionFieldProps) {
           <button
             type="button"
             onClick={() => {
-              const isFlagged = question.fail_values?.includes('false') || question.fail_values?.includes('no') || false;
+              const isFlagged = ['0', 'false', 'no', 'No'].some(v => question.fail_values?.includes(v)) || false;
               onAnswer({ answer_boolean: false, answer_value: 'false', is_flagged: isFlagged });
             }}
             className={cn(
