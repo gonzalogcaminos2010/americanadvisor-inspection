@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { FileText, X, AlertTriangle } from 'lucide-react';
+import { FileText, X, Send } from 'lucide-react';
 
 interface InspectionReportPreviewProps {
   open: boolean;
@@ -35,6 +35,40 @@ export function InspectionReportPreview({
 
   if (!open) return null;
 
+  // If preview failed or no PDF, show a simple confirmation modal instead
+  if (!loading && (error || !pdfUrl)) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
+              <Send className="h-5 w-5 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Confirmar Envio</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-6">
+            Esta a punto de enviar esta inspeccion para revision del supervisor. Una vez enviada no podra modificar las respuestas.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={onClose} disabled={submitting}>
+              Volver a editar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirm}
+              disabled={submitting}
+              isLoading={submitting}
+            >
+              Confirmar y Enviar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fullscreen PDF preview
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-white">
       {/* Header */}
@@ -61,30 +95,12 @@ export function InspectionReportPreview({
             <Spinner size="lg" />
             <span className="text-sm text-gray-500">Generando preview del informe...</span>
           </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 px-4">
-            <AlertTriangle className="h-12 w-12 text-amber-500" />
-            <div className="text-center max-w-md">
-              <p className="text-base font-semibold text-gray-900 mb-1">Preview no disponible</p>
-              <p className="text-sm text-gray-500">
-                {error}
-              </p>
-            </div>
-            <p className="text-sm text-gray-600">
-              Puede enviar la inspeccion de todas formas usando el boton de abajo.
-            </p>
-          </div>
-        ) : pdfUrl ? (
+        ) : (
           <iframe
-            src={pdfUrl}
+            src={pdfUrl!}
             className="w-full h-full border-0"
             title="Preview Informe Preliminar"
           />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
-            <AlertTriangle className="h-10 w-10 text-gray-400" />
-            <p className="text-sm">No se pudo generar el preview</p>
-          </div>
         )}
       </div>
 
