@@ -27,6 +27,23 @@ import { ArrowLeft, FileText, AlertTriangle, Camera, MapPin, CheckCircle, Shield
 
 type Tab = 'respuestas' | 'hallazgos' | 'fotos';
 
+const RESULT_LABELS: Record<string, string> = {
+  PASS: 'Aprobado',
+  FAIL: 'Reprobado',
+  NEEDS_REVIEW: 'Requiere Revision',
+  approved: 'Aprobado',
+  conditionally_approved: 'Aprobado Condicional',
+  rejected: 'Rechazado',
+  pass: 'Aprobado',
+  fail: 'Reprobado',
+  needs_review: 'Requiere Revision',
+};
+
+function formatResult(result: string | null | undefined): string {
+  if (!result) return '-';
+  return RESULT_LABELS[result] || result;
+}
+
 export default function InspectionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -74,10 +91,17 @@ export default function InspectionDetailPage() {
     );
   }
 
-  const isActive = inspection.status === InspectionStatus.NOT_STARTED || inspection.status === InspectionStatus.IN_PROGRESS;
-  const isReadOnly = inspection.status === InspectionStatus.COMPLETED || inspection.status === InspectionStatus.SUBMITTED || inspection.status === InspectionStatus.APPROVED || inspection.status === InspectionStatus.RETURNED;
+  // Normalize status to uppercase to match enum (API may return lowercase)
+  const status = (inspection.status?.toUpperCase() || '') as InspectionStatus;
+  const isActive = status === InspectionStatus.NOT_STARTED || status === InspectionStatus.IN_PROGRESS;
+  const isReadOnly = status === InspectionStatus.COMPLETED || status === InspectionStatus.SUBMITTED || status === InspectionStatus.APPROVED || status === InspectionStatus.RETURNED;
   const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
-  const canReview = inspection.status === InspectionStatus.SUBMITTED && isSupervisorOrAdmin;
+  const canReview = status === InspectionStatus.SUBMITTED && isSupervisorOrAdmin;
+
+  // Normalize overall_result for color logic (API may return lowercase like "approved", "conditionally_approved")
+  const resultUpper = (inspection.overall_result || '').toUpperCase();
+  const isPass = resultUpper === 'PASS' || resultUpper === 'APPROVED';
+  const isFail = resultUpper === 'FAIL' || resultUpper === 'REJECTED';
 
   const sections = inspection.template?.sections?.sort((a, b) => a.sort_order - b.sort_order) || [];
   const answers = inspection.answers || [];
@@ -140,9 +164,9 @@ export default function InspectionDetailPage() {
       {inspection.score != null && (
         <div
           className={`rounded-lg shadow px-6 py-4 flex items-center justify-between ${
-            inspection.overall_result === 'PASS'
+            isPass
               ? 'bg-green-50 border border-green-200'
-              : inspection.overall_result === 'FAIL'
+              : isFail
               ? 'bg-red-50 border border-red-200'
               : 'bg-yellow-50 border border-yellow-200'
           }`}
@@ -150,9 +174,9 @@ export default function InspectionDetailPage() {
           <div className="flex items-center gap-3">
             <ShieldCheck
               className={`h-6 w-6 ${
-                inspection.overall_result === 'PASS'
+                isPass
                   ? 'text-green-600'
-                  : inspection.overall_result === 'FAIL'
+                  : isFail
                   ? 'text-red-600'
                   : 'text-yellow-600'
               }`}
@@ -161,9 +185,9 @@ export default function InspectionDetailPage() {
               <p className="text-sm font-medium text-gray-700">Puntaje de Inspeccion</p>
               <p
                 className={`text-2xl font-bold ${
-                  inspection.overall_result === 'PASS'
+                  isPass
                     ? 'text-green-700'
-                    : inspection.overall_result === 'FAIL'
+                    : isFail
                     ? 'text-red-700'
                     : 'text-yellow-700'
                 }`}
@@ -176,20 +200,14 @@ export default function InspectionDetailPage() {
             <p className="text-xs font-medium text-gray-500 uppercase">Resultado</p>
             <p
               className={`text-lg font-bold ${
-                inspection.overall_result === 'PASS'
+                isPass
                   ? 'text-green-700'
-                  : inspection.overall_result === 'FAIL'
+                  : isFail
                   ? 'text-red-700'
                   : 'text-yellow-700'
               }`}
             >
-              {inspection.overall_result === 'PASS'
-                ? 'Aprobado'
-                : inspection.overall_result === 'FAIL'
-                ? 'Reprobado'
-                : inspection.overall_result === 'NEEDS_REVIEW'
-                ? 'Requiere Revision'
-                : inspection.overall_result ?? '-'}
+              {formatResult(inspection.overall_result)}
             </p>
             {inspection.final_result && inspection.final_result !== inspection.overall_result && (
               <p className="text-xs text-gray-500 mt-1">Resultado final: {inspection.final_result}</p>
@@ -224,7 +242,7 @@ export default function InspectionDetailPage() {
       )}
 
       {/* Returned alert */}
-      {inspection.status === InspectionStatus.RETURNED && inspection.supervisor_notes && (
+      {status === InspectionStatus.RETURNED && inspection.supervisor_notes && (
         <div className="bg-red-50 border border-red-300 rounded-lg px-6 py-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
           <div>
@@ -335,9 +353,9 @@ export default function InspectionDetailPage() {
         <Button variant="secondary" onClick={() => router.push('/inspections')}>
           Volver
         </Button>
-        {(inspection.status === InspectionStatus.COMPLETED ||
-          inspection.status === InspectionStatus.SUBMITTED ||
-          inspection.status === InspectionStatus.APPROVED) && (
+        {(status === InspectionStatus.COMPLETED ||
+          status === InspectionStatus.SUBMITTED ||
+          status === InspectionStatus.APPROVED) && (
           <Button
             variant="primary"
             onClick={async () => {
