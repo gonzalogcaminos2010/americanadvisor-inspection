@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
 import {
   InspectionRequest,
   InspectionRequestFormData,
@@ -32,7 +31,6 @@ const requestSchema = z.object({
   due_date: z.string().optional(),
   priority: z.string().min(1, 'Seleccione una prioridad'),
   inspection_type: z.string().min(1, 'Seleccione un tipo de inspección'),
-  requested_by: z.string().min(1, 'El solicitante es requerido'),
   description: z.string().min(1, 'La descripción es requerida'),
   amount: z.coerce.number().optional(),
   currency: z.string().optional(),
@@ -48,8 +46,6 @@ interface RequestFormProps {
 }
 
 export function RequestForm({ initialData, onSubmit, isLoading }: RequestFormProps) {
-  const { user } = useAuth();
-
   const { data: clientsResponse, isLoading: clientsLoading } = useQuery<PaginatedResponse<Client>>({
     queryKey: ['clients-active'],
     queryFn: () => api.get('/clients?active=true&per_page=100'),
@@ -86,7 +82,6 @@ export function RequestForm({ initialData, onSubmit, isLoading }: RequestFormPro
           due_date: initialData.due_date?.split('T')[0] ?? '',
           priority: initialData.priority ?? '',
           inspection_type: initialData.inspection_type ?? '',
-          requested_by: initialData.requested_by ?? user?.name ?? '',
           description: initialData.description ?? '',
           amount: initialData.amount ?? undefined,
           currency: initialData.currency ?? 'ARS',
@@ -95,7 +90,6 @@ export function RequestForm({ initialData, onSubmit, isLoading }: RequestFormPro
       : {
           request_number: generateRequestNumber(),
           request_date: today,
-          requested_by: user?.name ?? '',
           currency: 'ARS',
           inspection_type: 'PREVENTIVE',
           priority: 'MEDIUM',
@@ -110,7 +104,6 @@ export function RequestForm({ initialData, onSubmit, isLoading }: RequestFormPro
       request_date: values.request_date,
       priority: values.priority,
       inspection_type: values.inspection_type,
-      requested_by: values.requested_by,
       description: values.description,
     };
     if (values.due_date) data.due_date = values.due_date;
@@ -179,11 +172,6 @@ export function RequestForm({ initialData, onSubmit, isLoading }: RequestFormPro
           options={priorityOptions}
           error={errors.priority?.message}
           {...register('priority')}
-        />
-        <Input
-          label="Solicitado por *"
-          error={errors.requested_by?.message}
-          {...register('requested_by')}
         />
         <Input
           label="Fecha de Solicitud *"

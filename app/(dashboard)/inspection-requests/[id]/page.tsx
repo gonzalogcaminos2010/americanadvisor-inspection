@@ -1,19 +1,23 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useCrud } from '@/hooks/use-crud';
 import {
   InspectionRequest,
   WorkOrder,
+  WorkOrderFormData,
   ApiResponse,
   PaginatedResponse,
 } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
+import { WorkOrderForm } from '../../work-orders/_components/work-order-form';
 import {
   ArrowLeft,
   ClipboardList,
@@ -48,6 +52,14 @@ export default function InspectionRequestDetailPage() {
   const id = params.id as string;
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const [showCreateWO, setShowCreateWO] = useState(false);
+
+  const { useCreate: useCreateWO } = useCrud<WorkOrder, WorkOrderFormData>({
+    endpoint: '/work-orders',
+    queryKey: 'work-orders',
+  });
+  const createWOMutation = useCreateWO();
 
   const { data: requestResponse, isLoading } = useQuery<ApiResponse<InspectionRequest>>({
     queryKey: ['inspection-request', id],
@@ -147,7 +159,7 @@ export default function InspectionRequestDetailPage() {
       <div><div class="field-label">Prioridad</div><div class="field-value">${request.priority || '-'}</div></div>
       <div><div class="field-label">Fecha de Solicitud</div><div class="field-value">${dateStr}</div></div>
       <div><div class="field-label">Fecha Límite</div><div class="field-value">${dueStr}</div></div>
-      <div><div class="field-label">Solicitado por</div><div class="field-value">${request.requested_by || request.creator?.name || '-'}</div></div>
+      <div><div class="field-label">Solicitado por</div><div class="field-value">${request.creator?.name || '-'}</div></div>
       <div><div class="field-label">Moneda / Monto</div><div class="field-value">${request.currency || 'ARS'} ${request.total_amount || '0.00'}</div></div>
     </div>
   </div>
@@ -259,7 +271,7 @@ export default function InspectionRequestDetailPage() {
         <InfoCard
           icon={<User className="h-5 w-5 text-purple-500" />}
           label="Solicitado por"
-          value={request.requested_by || request.creator?.name || '-'}
+          value={request.creator?.name || '-'}
         />
       </div>
 
@@ -325,7 +337,7 @@ export default function InspectionRequestDetailPage() {
             <ClipboardList className="h-5 w-5 text-green-500" />
             Órdenes de Trabajo ({orders.length})
           </h2>
-          <Button size="sm" onClick={() => router.push('/work-orders')}>
+          <Button size="sm" onClick={() => setShowCreateWO(true)}>
             Crear Orden
           </Button>
         </div>
@@ -359,6 +371,43 @@ export default function InspectionRequestDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Modal crear OT */}
+      <Modal
+        isOpen={showCreateWO}
+        onClose={() => setShowCreateWO(false)}
+        title="Crear Orden de Trabajo"
+        size="xl"
+      >
+        <WorkOrderForm
+          preselectedRequest={{
+            id: request.id,
+            priority: request.priority,
+            due_date: request.due_date ?? undefined,
+          }}
+          onSubmit={(data) => {
+            createWOMutation.mutate(data, {
+              onSuccess: (res: unknown) => {
+                toast.success('Orden de trabajo creada exitosamente');
+                setShowCreateWO(false);
+                queryClient.invalidateQueries({ queryKey: ['request-work-orders', id] });
+                const newId = (res as { data?: { id?: number } })?.data?.id;
+                if (newId) router.push(`/work-orders/${newId}`);
+              },
+              onError: (err: unknown) => {
+                const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string };
+                const validationErrors = axiosErr?.response?.data?.errors;
+                if (validationErrors) {
+                  const firstError = Object.values(validationErrors).flat()[0];
+                  if (firstError) { toast.error(firstError); return; }
+                }
+                toast.error(axiosErr?.response?.data?.message || 'Error al crear la orden');
+              },
+            });
+          }}
+          isLoading={createWOMutation.isPending}
+        />
+      </Modal>
 
       {/* Back */}
       <div className="flex gap-3">

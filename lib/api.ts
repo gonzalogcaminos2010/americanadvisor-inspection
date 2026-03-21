@@ -120,6 +120,27 @@ export async function getInspectionReportPreview(inspectionId: number): Promise<
   return URL.createObjectURL(blob);
 }
 
+export async function getInspectionCertificate(inspectionId: number): Promise<string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+  const response = await fetch(
+    `${API_URL}/inspections/${inspectionId}/certificate`,
+    {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Accept: 'application/pdf',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Error al obtener el certificado');
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
 export async function getInspectionReport(inspectionId: number): Promise<string> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 

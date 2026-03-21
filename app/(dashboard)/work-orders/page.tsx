@@ -82,9 +82,11 @@ export default function WorkOrdersPage() {
       );
     } else {
       createMutation.mutate(data, {
-        onSuccess: () => {
+        onSuccess: (res) => {
           toast.success('Orden creada exitosamente');
           handleCloseModal();
+          const newId = res?.data?.id;
+          if (newId) router.push(`/work-orders/${newId}`);
         },
         onError: (err) => {
           toast.error(err.message || 'Error al procesar la solicitud');

@@ -4,7 +4,7 @@ import { Inspection, InspectionStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Column } from '@/components/shared/data-table';
-import { Eye, Play } from 'lucide-react';
+import { Eye, Play, Award } from 'lucide-react';
 
 export function getInspectionColumns(
   onView: (inspection: Inspection) => void,
@@ -58,6 +58,16 @@ export function getInspectionColumns(
         const date = item.started_at || item.created_at;
         return date ? new Date(date).toLocaleDateString('es-ES') : '-';
       },
+    },
+    {
+      key: 'certificate',
+      header: 'Cert.',
+      render: (item: Inspection) =>
+        item.certificate_number ? (
+          <span title={`Certificado ${item.certificate_number}`}>
+            <Award className="h-4 w-4 text-emerald-600" />
+          </span>
+        ) : null,
     },
     {
       key: 'actions',

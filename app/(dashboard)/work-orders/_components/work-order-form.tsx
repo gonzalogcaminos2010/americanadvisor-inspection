@@ -60,6 +60,7 @@ interface WorkOrderFormProps {
   initialData?: WorkOrder;
   onSubmit: (data: WorkOrderFormData) => void;
   isLoading: boolean;
+  preselectedRequest?: { id: number; priority?: string; due_date?: string };
 }
 
 function getEquipmentLabel(e: Equipment): string {
@@ -74,7 +75,7 @@ function getRequestLabel(r: InspectionRequest): string {
   return `${number} - ${client}`;
 }
 
-export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFormProps) {
+export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedRequest }: WorkOrderFormProps) {
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
 
@@ -109,9 +110,9 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
               }],
         }
       : {
-          inspection_request_id: '' as unknown as number,
-          priority: 'MEDIUM',
-          scheduled_date: new Date().toISOString().split('T')[0],
+          inspection_request_id: preselectedRequest?.id ?? ('' as unknown as number),
+          priority: preselectedRequest?.priority || 'MEDIUM',
+          scheduled_date: preselectedRequest?.due_date?.split('T')[0] || new Date().toISOString().split('T')[0],
           default_inspector_id: '' as unknown as number,
           default_template_id: '' as unknown as number,
           items: [{ equipment_id: '' as unknown as number, template_id: undefined, inspector_id: undefined, notes: '' }],
@@ -288,6 +289,7 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading }: WorkOrderFor
           label="Solicitud de Inspeccion *"
           error={errors.inspection_request_id?.message}
           placeholder="Seleccionar solicitud"
+          disabled={!!preselectedRequest}
           options={inspectionRequests.map((r) => ({
             value: String(r.id),
             label: getRequestLabel(r),

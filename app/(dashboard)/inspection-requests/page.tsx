@@ -77,9 +77,11 @@ export default function InspectionRequestsPage() {
 
   const handleCreate = (data: InspectionRequestFormData) => {
     createMutation.mutate(data, {
-      onSuccess: () => {
+      onSuccess: (res: unknown) => {
         toast.success('Solicitud creada exitosamente');
         setModalOpen(false);
+        const newId = (res as { data?: { id?: number } })?.data?.id;
+        if (newId) router.push(`/inspection-requests/${newId}`);
       },
       onError: (err) => {
         toast.error(extractError(err));

@@ -289,6 +289,9 @@ export interface Inspection {
   client_signature: string | null;
   client_signed_at: string | null;
   all_signatures_complete: boolean;
+  certificate_number?: string | null;
+  certificate_issued_at?: string | null;
+  qr_token?: string | null;
   template?: InspectionTemplate;
   work_order?: WorkOrder;
   inspector?: User;
@@ -391,7 +394,6 @@ export interface InspectionRequestFormData {
   due_date?: string;
   priority: string;
   inspection_type: string;
-  requested_by: string;
   description: string;
   amount?: number;
   currency?: string;

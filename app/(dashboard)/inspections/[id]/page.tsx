@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
-import { api, getInspectionReport } from '@/lib/api';
+import { api, getInspectionReport, getInspectionCertificate } from '@/lib/api';
 import { useToast } from '@/components/ui/toast';
 import {
   Inspection,
@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { InspectionExecutor } from '@/components/inspection/inspection-executor';
 import { SignatureSection } from '@/components/inspection/signature-section';
-import { ArrowLeft, FileText, AlertTriangle, Camera, MapPin, CheckCircle, ShieldCheck, RotateCcw } from 'lucide-react';
+import { ArrowLeft, FileText, AlertTriangle, Camera, MapPin, CheckCircle, ShieldCheck, RotateCcw, Award, Download } from 'lucide-react';
 
 type Tab = 'respuestas' | 'hallazgos' | 'fotos';
 
@@ -238,6 +238,42 @@ export default function InspectionDetailPage() {
               <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{inspection.supervisor_notes}</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Certificate card */}
+      {inspection.certificate_number && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Award className="h-6 w-6 text-emerald-600" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-900">Certificado de Inspeccion</p>
+                <p className="text-sm text-emerald-700 mt-0.5">
+                  N° {inspection.certificate_number}
+                </p>
+                {inspection.certificate_issued_at && (
+                  <p className="text-xs text-emerald-600 mt-0.5">
+                    Emitido: {new Date(inspection.certificate_issued_at).toLocaleString('es-ES')}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                try {
+                  const url = await getInspectionCertificate(inspection.id);
+                  window.open(url, '_blank');
+                } catch {
+                  toast.error('Error al obtener el certificado');
+                }
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Descargar Certificado
+            </Button>
+          </div>
         </div>
       )}
 
