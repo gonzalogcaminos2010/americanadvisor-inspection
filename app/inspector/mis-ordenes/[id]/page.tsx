@@ -7,16 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
+import { ProgressStepper } from '@/components/inspector/progress-stepper';
+import { EquipmentCard } from '@/components/inspector/equipment-card';
 import {
   ArrowLeft,
   Play,
   CheckCircle,
   Truck,
-  User,
   Calendar,
-  FileText,
-  ClipboardList,
-  Eye,
+  Building2,
+  ChevronRight,
+  ClipboardCheck,
 } from 'lucide-react';
 import type {
   WorkOrder,
@@ -25,6 +26,7 @@ import type {
   ApiResponse,
   PaginatedResponse,
 } from '@/types';
+import Link from 'next/link';
 
 export default function InspectorOrderDetailPage() {
   const params = useParams();
@@ -33,21 +35,18 @@ export default function InspectorOrderDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch work order
   const { data: woResponse, isLoading: woLoading } = useQuery<ApiResponse<WorkOrder>>({
     queryKey: ['work-order', id],
     queryFn: () => api.get(`/work-orders/${id}`),
     enabled: !!id,
   });
 
-  // Fetch items
   const { data: itemsResponse, isLoading: itemsLoading } = useQuery<ApiResponse<WorkOrderItem[]>>({
     queryKey: ['work-order-items', id],
     queryFn: () => api.get(`/work-orders/${id}/items`),
     enabled: !!id,
   });
 
-  // Fetch inspections separately (API does not embed them in items)
   const { data: inspectionsResponse, isLoading: inspectionsLoading } = useQuery<PaginatedResponse<Inspection>>({
     queryKey: ['work-order-inspections', id],
     queryFn: () => api.get(`/inspections?work_order_id=${id}&per_page=100`),
@@ -61,7 +60,7 @@ export default function InspectorOrderDetailPage() {
     : Array.isArray((rawItems as ApiResponse<WorkOrderItem[]>)?.data)
       ? (rawItems as ApiResponse<WorkOrderItem[]>).data
       : [];
-  // Build inspection map by work_order_item_id
+
   const inspectionsList: Inspection[] = inspectionsResponse?.data ?? [];
   const inspectionsByItemId = new Map<number, Inspection>();
   inspectionsList.forEach((insp) => {
@@ -74,7 +73,6 @@ export default function InspectorOrderDetailPage() {
     }
   });
 
-  // Start work order
   const startMutation = useMutation({
     mutationFn: () => api.post(`/work-orders/${id}/start`),
     onSuccess: () => {
@@ -85,7 +83,6 @@ export default function InspectorOrderDetailPage() {
     onError: () => toast.error('Error al iniciar la orden'),
   });
 
-  // Complete work order
   const completeMutation = useMutation({
     mutationFn: () => api.post(`/work-orders/${id}/complete`),
     onSuccess: () => {
@@ -99,7 +96,6 @@ export default function InspectorOrderDetailPage() {
     },
   });
 
-  // Create inspection for an item
   const createInspectionMutation = useMutation({
     mutationFn: (data: { work_order_item_id: number; template_id?: number }) =>
       api.post<ApiResponse<Inspection>>(`/inspections`, { work_order_item_id: data.work_order_item_id }),
@@ -137,15 +133,20 @@ export default function InspectorOrderDetailPage() {
     );
   }
 
-  const status = workOrder.status?.toLowerCase() || '';
+  const status = String(workOrder.status).toLowerCase();
   const isPending = status === 'pending';
   const isInProgress = status === 'in_progress';
   const isCompleted = status === 'completed';
 
-  const allItemsCompleted = items.length > 0 && items.every((i) => {
-    const s = i.status?.toLowerCase() || '';
+  const completedItemsCount = items.filter((i) => {
+    const s = String(i.status).toLowerCase();
     return s === 'completed' || s === 'skipped';
-  });
+  }).length;
+
+  const allItemsCompleted = items.length > 0 && completedItemsCount === items.length;
+
+  const clientName = workOrder.inspection_request?.client?.name ?? '';
+  const orderNumber = workOrder.order_number ?? workOrder.code ?? `OT #${workOrder.id}`;
 
   const handleStartInspection = (item: WorkOrderItem) => {
     const raw = item as unknown as Record<string, unknown>;
@@ -156,62 +157,93 @@ export default function InspectorOrderDetailPage() {
     });
   };
 
+  const stepperSteps = [
+    { label: 'Asignada', completed: true, active: false },
+    { label: 'En Progreso', completed: isInProgress || isCompleted, active: isInProgress && !allItemsCompleted },
+    { label: 'Inspecciones Completas', completed: isCompleted || (isInProgress && allItemsCompleted), active: isInProgress && allItemsCompleted },
+    { label: 'Finalizada', completed: isCompleted, active: false },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-sm text-gray-500">
+        <Link href="/inspector" className="hover:text-green-700 transition-colors">Inicio</Link>
+        <ChevronRight className="h-3.5 w-3.5" />
+        <Link href="/inspector/mis-ordenes" className="hover:text-green-700 transition-colors">Mis Ordenes</Link>
+        <ChevronRight className="h-3.5 w-3.5" />
+        <span className="text-gray-900 font-medium">{orderNumber}</span>
+      </nav>
+
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push('/inspector/mis-ordenes')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Orden {workOrder.order_number ?? workOrder.code}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {workOrder.inspection_request?.client?.name ?? ''}
-          </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{orderNumber}</h1>
+          {clientName && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <Building2 className="h-4 w-4 text-gray-400" />
+              <p className="text-sm text-gray-600">{clientName}</p>
+            </div>
+          )}
         </div>
         <Badge status={workOrder.status} size="md" />
       </div>
 
-      {/* Info cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <InfoCard
-          icon={<Truck className="h-5 w-5 text-blue-500" />}
-          label="Equipos"
-          value={`${items.length} equipo${items.length !== 1 ? 's' : ''}`}
-        />
-        <InfoCard
-          icon={<User className="h-5 w-5 text-green-500" />}
-          label="Inspector"
-          value={workOrder.inspector?.name ?? 'Sin asignar'}
-        />
-        <InfoCard
-          icon={<Calendar className="h-5 w-5 text-orange-500" />}
-          label="Fecha Programada"
-          value={workOrder.scheduled_date ? new Date(workOrder.scheduled_date).toLocaleDateString('es-AR') : 'Sin fecha'}
-        />
-        <InfoCard
-          icon={<FileText className="h-5 w-5 text-purple-500" />}
-          label="Cliente"
-          value={workOrder.inspection_request?.client?.name ?? '-'}
-        />
+      {/* Stepper */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <ProgressStepper steps={stepperSteps} />
+      </div>
+
+      {/* Info row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+            <Truck className="h-3.5 w-3.5" />
+            Equipos
+          </div>
+          <p className="text-lg font-bold text-gray-900">{items.length}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+            <CheckCircle className="h-3.5 w-3.5" />
+            Completados
+          </div>
+          <p className="text-lg font-bold text-green-700">{completedItemsCount}/{items.length}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+            <Calendar className="h-3.5 w-3.5" />
+            Fecha
+          </div>
+          <p className="text-sm font-semibold text-gray-900">
+            {workOrder.scheduled_date
+              ? new Date(workOrder.scheduled_date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+              : '-'}
+          </p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            Inspecciones
+          </div>
+          <p className="text-lg font-bold text-gray-900">{inspectionsList.length}</p>
+        </div>
       </div>
 
       {/* Notes */}
       {workOrder.notes && (
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">Notas</p>
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{workOrder.notes}</p>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-xs font-medium text-amber-700 uppercase mb-1">Notas</p>
+          <p className="text-sm text-amber-900 whitespace-pre-wrap">{workOrder.notes}</p>
         </div>
       )}
 
       {/* PENDING: Start button */}
       {isPending && (
-        <div className="bg-white rounded-lg shadow p-6 text-center">
-          <Play className="h-12 w-12 text-blue-500 mx-auto mb-3" />
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Orden Pendiente</h2>
-          <p className="text-sm text-gray-500 mb-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+          <Play className="h-10 w-10 text-blue-500 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-blue-900 mb-1">Orden Pendiente</h2>
+          <p className="text-sm text-blue-700 mb-4">
             Inicie la orden para comenzar las inspecciones de {items.length} equipo{items.length !== 1 ? 's' : ''}.
           </p>
           <Button onClick={() => startMutation.mutate()} isLoading={startMutation.isPending}>
@@ -221,13 +253,10 @@ export default function InspectorOrderDetailPage() {
         </div>
       )}
 
-      {/* Items list */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <ClipboardList className="h-5 w-5 text-blue-500" />
-            Equipos e Inspecciones
-          </h2>
+      {/* Equipment cards */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Equipos</h2>
           {isInProgress && allItemsCompleted && (
             <Button onClick={() => completeMutation.mutate()} isLoading={completeMutation.isPending}>
               <CheckCircle className="h-4 w-4 mr-2" />
@@ -236,96 +265,53 @@ export default function InspectorOrderDetailPage() {
           )}
         </div>
 
-        <div className="divide-y divide-gray-100">
-          {items.map((item) => {
-            const itemStatus = item.status?.toLowerCase() || '';
-            const isItemPending = itemStatus === 'pending';
-            const isItemInProgress = itemStatus === 'in_progress';
-            const isItemCompleted = itemStatus === 'completed';
+        {items.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+            <Truck className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-500">No hay equipos en esta orden.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {items.map((item) => {
+              const itemInsp = inspectionsByItemId.get(item.id) || null;
+              const canCreate = isInProgress && !itemInsp;
 
-            // Get inspection from the separate inspections query
-            const itemInsp = inspectionsByItemId.get(item.id) || null;
-            const inspStatus = itemInsp?.status?.toLowerCase() || '';
-            const activeInsp = (inspStatus === 'not_started' || inspStatus === 'in_progress' || inspStatus === 'standby' || inspStatus === 'returned') ? itemInsp : null;
-            const completedInsp = (inspStatus === 'completed' || inspStatus === 'submitted' || inspStatus === 'approved') ? itemInsp : null;
-
-            return (
-              <div key={item.id} className="px-6 py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      isItemCompleted ? 'bg-green-100' :
-                      isItemInProgress ? 'bg-blue-100' :
-                      'bg-yellow-100'
-                    }`}>
-                      {isItemCompleted ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <Truck className={`h-5 w-5 ${isItemInProgress ? 'text-blue-600' : 'text-yellow-600'}`} />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {item.equipment?.name ?? `Equipo #${item.equipment_id}`}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Badge status={item.status} />
-                        {item.template && (
-                          <span className="text-xs text-gray-500">{item.template.name}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {isInProgress && !itemInsp && (isItemPending || isItemInProgress) && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleStartInspection(item)}
-                        isLoading={createInspectionMutation.isPending}
-                      >
-                        <Play className="h-3 w-3 mr-1" />
-                        {isItemPending ? 'Iniciar Inspeccion' : 'Crear Inspeccion'}
-                      </Button>
-                    )}
-                    {activeInsp && (
-                      <Button
-                        size="sm"
-                        onClick={() => router.push(`/inspector/mis-inspecciones/${activeInsp.id}`)}
-                      >
-                        Continuar
-                      </Button>
-                    )}
-                    {completedInsp && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => router.push(`/inspector/mis-inspecciones/${completedInsp.id}`)}
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        Ver
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {items.length === 0 && (
-            <div className="px-6 py-8 text-center text-gray-500">
-              <p className="text-sm">No hay equipos en esta orden.</p>
-            </div>
-          )}
-        </div>
+              return (
+                <EquipmentCard
+                  key={item.id}
+                  item={item}
+                  inspection={canCreate ? null : itemInsp}
+                  onStartInspection={handleStartInspection}
+                  onContinueInspection={(inspId) => router.push(`/inspector/mis-inspecciones/${inspId}`)}
+                  onViewInspection={(inspId) => router.push(`/inspector/mis-inspecciones/${inspId}`)}
+                  loading={createInspectionMutation.isPending}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {/* Summary */}
+      {items.length > 0 && (
+        <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3 text-center">
+          <p className="text-sm text-gray-600">
+            {completedItemsCount} de {items.length} equipo{items.length !== 1 ? 's' : ''} inspeccionado{completedItemsCount !== 1 ? 's' : ''}
+            {inspectionsList.filter((i) => i.findings && i.findings.length > 0).length > 0 && (
+              <span className="text-amber-600 ml-1">
+                — {inspectionsList.reduce((sum, i) => sum + (i.findings?.length || 0), 0)} hallazgo(s)
+              </span>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Completed state */}
       {isCompleted && (
-        <div className="bg-white rounded-lg shadow p-6 text-center">
-          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-          <h2 className="text-lg font-semibold text-gray-900">Orden Completada</h2>
-          <p className="text-sm text-gray-500">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+          <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-green-900">Orden Completada</h2>
+          <p className="text-sm text-green-700">
             {workOrder.completed_at
               ? `Completada el ${new Date(workOrder.completed_at).toLocaleString('es-AR')}`
               : 'Esta orden ha sido completada.'}
@@ -339,26 +325,6 @@ export default function InspectorOrderDetailPage() {
           <ArrowLeft className="h-4 w-4 mr-1" />
           Volver a Mis Ordenes
         </Button>
-      </div>
-    </div>
-  );
-}
-
-function InfoCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="bg-white rounded-lg shadow px-4 py-3 flex items-start gap-3">
-      <div className="mt-0.5">{icon}</div>
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-gray-500 uppercase">{label}</p>
-        <p className="text-sm font-semibold text-gray-900">{value}</p>
       </div>
     </div>
   );
