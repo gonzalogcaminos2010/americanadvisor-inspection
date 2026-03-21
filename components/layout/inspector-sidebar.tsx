@@ -4,7 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { Inspection, PaginatedResponse } from '@/types';
 import {
+  LayoutDashboard,
   FileCheck,
   ClipboardCheck,
   LogOut,
@@ -13,14 +17,23 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { label: 'Mis Órdenes', href: '/inspector/mis-ordenes', icon: FileCheck },
-  { label: 'Mis Inspecciones', href: '/inspector/mis-inspecciones', icon: ClipboardCheck },
+  { label: 'Inicio', href: '/inspector', icon: LayoutDashboard, exact: true },
+  { label: 'Mis Ordenes', href: '/inspector/mis-ordenes', icon: FileCheck },
+  { label: 'Mis Inspecciones', href: '/inspector/mis-inspecciones', icon: ClipboardCheck, badgeKey: 'returned' as const },
 ];
 
 export function InspectorSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const { data: returnedData } = useQuery<PaginatedResponse<Inspection>>({
+    queryKey: ['inspector-returned-count', user?.id],
+    queryFn: () => api.get('/inspections', { params: { inspector_id: user?.id, status: 'returned', per_page: 1 } }),
+    enabled: !!user?.id,
+    refetchInterval: 60000,
+  });
+  const returnedCount = returnedData?.meta?.total ?? 0;
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -39,8 +52,13 @@ export function InspectorSidebar() {
         </p>
         <div className="space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.href);
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href) && !navItems.some(
+                  (other) => other !== item && !other.exact && pathname.startsWith(other.href) && other.href.length > item.href.length
+                );
             const Icon = item.icon;
+            const badgeCount = item.badgeKey === 'returned' ? returnedCount : 0;
             return (
               <Link
                 key={item.href}
@@ -53,7 +71,12 @@ export function InspectorSidebar() {
                 }`}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {badgeCount > 0 && (
+                  <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-white text-xs font-bold">
+                    {badgeCount}
+                  </span>
+                )}
               </Link>
             );
           })}
