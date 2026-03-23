@@ -75,7 +75,7 @@ export default function InspectionRequestDetailPage() {
 
   const changeStatusMutation = useMutation({
     mutationFn: (status: string) =>
-      api.post(`/inspection-requests/${id}/change-status`, { status }),
+      api.put(`/inspection-requests/${id}`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inspection-request', id] });
       queryClient.invalidateQueries({ queryKey: ['inspection-requests'] });

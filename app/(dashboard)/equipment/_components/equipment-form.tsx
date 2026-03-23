@@ -97,7 +97,7 @@ export function EquipmentForm({ initialData, onSubmit, isLoading }: EquipmentFor
     const client = clients.find((c) => c.id === Number(selectedClientId));
     if (!client) return;
 
-    api.get<{ success: boolean; data: Equipment[] }>(`/clients/${client.id}/equipment`)
+    api.get<{ success: boolean; data: Equipment[] }>('/equipment', { params: { client_id: client.id } })
       .then((res) => {
         const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
         const nextNum = String(list.length + 1).padStart(3, '0');

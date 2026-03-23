@@ -235,7 +235,7 @@ export function useInspection(inspectionId: number | null) {
 
   // Start inspection
   const startMutation = useMutation<ApiResponse<Inspection>, Error, { work_order_id: number; template_id: number }>({
-    mutationFn: (data) => api.post(`/work-orders/${data.work_order_id}/inspections`, { template_id: data.template_id }),
+    mutationFn: (data) => api.post('/inspections', { work_order_item_id: data.work_order_id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inspections'] });
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });

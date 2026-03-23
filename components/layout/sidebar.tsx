@@ -40,21 +40,21 @@ const baseNavGroups: NavGroup[] = [
     label: 'GESTIÓN',
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { label: 'Clientes', href: '/clients', icon: Users },
-      { label: 'Equipos', href: '/equipment', icon: Wrench },
+      { label: 'Clientes', href: '/clients', icon: Users, roles: ['admin'] },
+      { label: 'Equipos', href: '/equipment', icon: Wrench, roles: ['admin'] },
     ],
   },
   {
     label: 'OPERACIONES',
     items: [
-      { label: 'Solicitudes', href: '/inspection-requests', icon: ClipboardList },
+      { label: 'Solicitudes', href: '/inspection-requests', icon: ClipboardList, roles: ['admin'] },
       { label: 'Órdenes de Trabajo', href: '/work-orders', icon: FileCheck },
     ],
   },
   {
     label: 'INSPECCIONES',
     items: [
-      { label: 'Plantillas', href: '/templates', icon: FileText },
+      { label: 'Plantillas', href: '/templates', icon: FileText, roles: ['admin'] },
       { label: 'Inspecciones', href: '/inspections', icon: ClipboardCheck },
       { label: 'Revisiones Pendientes', href: '/revisiones', icon: ShieldCheck, roles: ['supervisor', 'admin'] },
       { label: 'Hallazgos', href: '/findings', icon: AlertTriangle },

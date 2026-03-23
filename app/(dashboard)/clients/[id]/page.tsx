@@ -63,7 +63,7 @@ export default function ClientDetailPage() {
   const { data: equipmentResponse } = useQuery<ApiResponse<Equipment[]> | PaginatedResponse<Equipment>>({
     queryKey: ['client-equipment', id],
     queryFn: async () => {
-      const raw = await api.get<Record<string, unknown>>(`/clients/${id}/equipment`);
+      const raw = await api.get<Record<string, unknown>>('/equipment', { params: { client_id: id } });
       // Map each equipment item from API format
       if (raw && typeof raw === 'object') {
         const r = raw as Record<string, unknown>;
