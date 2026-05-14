@@ -1,10 +1,33 @@
 'use client';
 
-import { Finding } from '@/types';
+import { Finding, FindingStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Column } from '@/components/shared/data-table';
 import { Pencil, ExternalLink } from 'lucide-react';
+
+function DeadlineBadge({ finding }: { finding: Finding }) {
+  const closed = finding.status === FindingStatus.RESOLVED || finding.status === FindingStatus.CLOSED;
+  if (closed || !finding.due_date) return <span className="text-gray-400 text-xs">—</span>;
+
+  const days = Math.ceil((new Date(finding.due_date).getTime() - Date.now()) / 86400000);
+
+  if (days < 0) return (
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">
+      Vencido
+    </span>
+  );
+  if (days <= 7) return (
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">
+      {days}d restantes
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">
+      {days}d restantes
+    </span>
+  );
+}
 
 export function getFindingColumns(
   onEdit: (finding: Finding) => void,
@@ -43,12 +66,9 @@ export function getFindingColumns(
       },
     },
     {
-      key: 'is_resolved',
-      header: 'Resuelto',
-      render: (item: Finding) => {
-        const resolved = (item as unknown as Record<string, unknown>).is_resolved;
-        return resolved ? 'Si' : 'No';
-      },
+      key: 'due_date',
+      header: 'Plazo',
+      render: (item: Finding) => <DeadlineBadge finding={item} />,
     },
     {
       key: 'actions',

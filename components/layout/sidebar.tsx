@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { PaginatedResponse, Inspection } from '@/types';
+import { PaginatedResponse, Inspection, Finding, FindingStatus } from '@/types';
 import { NotificationBell, NotificationItem } from '@/components/layout/notification-bell';
 import {
   LayoutDashboard,
@@ -83,21 +83,53 @@ export function Sidebar() {
 
   const submittedCount = submittedData?.meta?.total ?? 0;
 
-  const bellItems: NotificationItem[] = (submittedData?.data ?? []).map((insp) => {
-    const raw = insp as unknown as Record<string, unknown>;
-    const equip = raw.equipment as Record<string, unknown> | undefined;
-    return {
-      id: insp.id,
-      equipmentName:
-        (equip?.name as string) ||
-        insp.work_order?.equipment?.name ||
-        `Inspección #${insp.id}`,
-      statusLabel: 'Enviada — pendiente de revisión',
-      statusColor: 'blue',
-      href: `/dashboard/inspections/${insp.id}`,
-      date: insp.completed_at || insp.updated_at,
-    };
+  const sevenDaysFromNow = new Date();
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+  const { data: findingsData } = useQuery<PaginatedResponse<Finding>>({
+    queryKey: ['findings-expiring-bell'],
+    queryFn: () => api.get('/findings?per_page=50&status=OPEN,IN_REVIEW,CORRECTIVE_ACTION'),
+    enabled: isSupervisorOrAdmin,
+    refetchInterval: 60000,
   });
+
+  const expiringFindings = (findingsData?.data ?? []).filter((f) => {
+    if (!f.due_date) return false;
+    const due = new Date(f.due_date);
+    return due <= sevenDaysFromNow;
+  }).slice(0, 5);
+
+  const expiringCount = expiringFindings.length;
+
+  const bellItems: NotificationItem[] = [
+    ...(submittedData?.data ?? []).map((insp) => {
+      const raw = insp as unknown as Record<string, unknown>;
+      const equip = raw.equipment as Record<string, unknown> | undefined;
+      return {
+        id: insp.id,
+        equipmentName:
+          (equip?.name as string) ||
+          insp.work_order?.equipment?.name ||
+          `Inspección #${insp.id}`,
+        statusLabel: 'Enviada — pendiente de revisión',
+        statusColor: 'blue' as const,
+        href: `/dashboard/inspections/${insp.id}`,
+        date: insp.completed_at || insp.updated_at,
+      };
+    }),
+    ...expiringFindings.map((f) => {
+      const days = Math.ceil((new Date(f.due_date!).getTime() - Date.now()) / 86400000);
+      const isOverdue = days < 0;
+      return {
+        id: f.id + 100000,
+        equipmentName: f.title || `Hallazgo #${f.id}`,
+        statusLabel: isOverdue ? 'Hallazgo vencido' : `Hallazgo vence en ${days}d`,
+        statusColor: isOverdue ? 'amber' as const : 'amber' as const,
+        href: `/dashboard/findings`,
+        date: f.due_date,
+      };
+    }),
+  ].slice(0, 5);
 
   const navGroups = baseNavGroups.map((group) => ({
     ...group,
@@ -163,7 +195,7 @@ export function Sidebar() {
         <div className="border-t border-gray-200 pt-2">
           <NotificationBell
             items={bellItems}
-            totalCount={submittedCount}
+            totalCount={submittedCount + expiringCount}
             viewAllHref="/dashboard/revisiones"
             viewAllLabel="Ver revisiones pendientes"
           />
