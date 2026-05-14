@@ -143,6 +143,15 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+export interface UserFormData {
+  name: string;
+  email: string;
+  role: string;
+  password: string;
 }
 
 export interface InspectionRequest {

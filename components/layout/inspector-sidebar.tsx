@@ -15,7 +15,9 @@ import {
   LogOut,
   Menu,
   X,
+  KeyRound,
 } from 'lucide-react';
+import { ChangePasswordModal } from '@/components/ui/change-password-modal';
 
 const navItems = [
   { label: 'Inicio', href: '/inspector', icon: LayoutDashboard, exact: true },
@@ -27,6 +29,7 @@ export function InspectorSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const { data: returnedData } = useQuery<PaginatedResponse<Inspection>>({
     queryKey: ['inspector-returned-bell', user?.id],
@@ -133,13 +136,22 @@ export function InspectorSidebar() {
               <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
               <p className="text-xs text-gray-500 truncate">{user.email}</p>
             </div>
-            <button
-              onClick={logout}
-              className="ml-2 p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
-              title="Cerrar sesion"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <div className="flex items-center ml-2">
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Cambiar contraseña"
+              >
+                <KeyRound className="h-4 w-4" />
+              </button>
+              <button
+                onClick={logout}
+                className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Cerrar sesion"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -184,6 +196,11 @@ export function InspectorSidebar() {
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 bg-white border-r border-gray-200">
         {sidebarContent}
       </aside>
+
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </>
   );
 }

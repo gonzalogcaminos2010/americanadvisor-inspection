@@ -21,7 +21,9 @@ import {
   Menu,
   X,
   ShieldCheck,
+  KeyRound,
 } from 'lucide-react';
+import { ChangePasswordModal } from '@/components/ui/change-password-modal';
 
 interface NavItem {
   label: string;
@@ -41,6 +43,7 @@ const baseNavGroups: NavGroup[] = [
     label: 'GESTIÓN',
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { label: 'Usuarios', href: '/dashboard/usuarios', icon: Users, roles: ['admin'] },
       { label: 'Clientes', href: '/clients', icon: Users, roles: ['admin'] },
       { label: 'Equipos', href: '/equipment', icon: Wrench, roles: ['admin'] },
     ],
@@ -67,6 +70,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
 
@@ -173,17 +177,33 @@ export function Sidebar() {
               <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
               <p className="text-xs text-gray-500 truncate">{user.email}</p>
             </div>
-            <button
-              onClick={logout}
-              className="ml-2 p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
-              title="Cerrar sesion"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <div className="flex items-center ml-2">
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Cambiar contraseña"
+              >
+                <KeyRound className="h-4 w-4" />
+              </button>
+              <button
+                onClick={logout}
+                className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Cerrar sesion"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>
     </div>
+  );
+
+  const passwordModal = (
+    <ChangePasswordModal
+      isOpen={showPasswordModal}
+      onClose={() => setShowPasswordModal(false)}
+    />
   );
 
   return (
@@ -224,6 +244,8 @@ export function Sidebar() {
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 bg-white border-r border-gray-200">
         {sidebarContent}
       </aside>
+
+      {passwordModal}
     </>
   );
 }
