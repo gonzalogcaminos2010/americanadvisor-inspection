@@ -17,7 +17,24 @@ import {
   Activity,
   TrendingUp,
   FileCheck,
+  ShieldAlert,
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts';
+
+interface MonthlyInspection {
+  month: string;
+  count: number;
+  approved: number;
+  rejected: number;
+}
 
 interface StatsData {
   total_clients: number;
@@ -32,6 +49,13 @@ interface StatsData {
     equipment?: { name: string };
     created_at: string;
   }>;
+  // New fields — may not exist yet from the backend
+  inspections_by_month?: MonthlyInspection[];
+  approval_rate?: number;
+  approved_count?: number;
+  conditionally_approved_count?: number;
+  rejected_count?: number;
+  critical_findings_open?: number;
 }
 
 interface ApiResponse {
@@ -251,6 +275,294 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Section A: Inspecciones por mes ── */}
+      <InspectionsByMonthChart data={statsData.inspections_by_month} />
+
+      {/* ── Section B: Métricas de resultados ── */}
+      <ResultsMetrics
+        approvalRate={statsData.approval_rate}
+        approvedCount={statsData.approved_count}
+        conditionallyApprovedCount={statsData.conditionally_approved_count}
+        rejectedCount={statsData.rejected_count}
+        criticalFindingsOpen={statsData.critical_findings_open}
+      />
+    </div>
+  );
+}
+
+/* ─── Chart helper ─── */
+
+const MONTH_LABELS: Record<string, string> = {
+  '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr',
+  '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago',
+  '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic',
+};
+
+function formatMonthLabel(month: string): string {
+  const parts = month.split('-');
+  const mm = parts[1] ?? '';
+  return MONTH_LABELS[mm] ?? month;
+}
+
+/* ─── Section A ─── */
+
+function InspectionsByMonthChart({ data }: { data?: MonthlyInspection[] }) {
+  const chartData = data?.map((d) => ({ ...d, label: formatMonthLabel(d.month) }));
+
+  return (
+    <div
+      className="dash-reveal bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden"
+      style={{ animationDelay: '520ms' }}
+    >
+      <div className="px-5 pt-5 pb-3">
+        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+          Inspecciones por Mes
+        </h3>
+        <p className="text-[11px] text-slate-400 mt-0.5">Ultimos 6 meses</p>
+      </div>
+
+      {!chartData || chartData.length === 0 ? (
+        <div className="px-5 pb-6">
+          <div className="flex items-center justify-center h-[200px] rounded-lg bg-slate-50 border border-dashed border-slate-200">
+            <div className="text-center space-y-1">
+              <div className="flex justify-center gap-1">
+                {[40, 60, 45, 70, 55, 80].map((h, i) => (
+                  <div
+                    key={i}
+                    className="w-6 rounded-sm bg-slate-200 animate-pulse"
+                    style={{ height: `${h}px`, animationDelay: `${i * 80}ms` }}
+                  />
+                ))}
+              </div>
+              <p className="text-xs font-medium text-slate-400 mt-3">Datos proximos</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="px-5 pb-5">
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={chartData} barSize={22} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke="#f1f5f9" />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: '#cbd5e1' }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip
+                cursor={{ fill: '#f8fafc' }}
+                contentStyle={{
+                  fontSize: 12,
+                  borderRadius: 8,
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07)',
+                }}
+                formatter={(value: number, name: string) => {
+                  const labels: Record<string, string> = {
+                    count: 'Total',
+                    approved: 'Aprobadas',
+                    rejected: 'Rechazadas',
+                  };
+                  return [value, labels[name] ?? name];
+                }}
+              />
+              <Bar dataKey="count" name="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="approved" name="approved" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="rejected" name="rejected" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="flex items-center gap-4 mt-2 px-1">
+            <LegendDot color="bg-indigo-500" label="Total" />
+            <LegendDot color="bg-emerald-500" label="Aprobadas" />
+            <LegendDot color="bg-rose-500" label="Rechazadas" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className={`w-2.5 h-2.5 rounded-full ${color}`} />
+      <span className="text-[11px] font-medium text-slate-400">{label}</span>
+    </div>
+  );
+}
+
+/* ─── Section B ─── */
+
+function ResultsMetrics({
+  approvalRate,
+  approvedCount,
+  conditionallyApprovedCount,
+  rejectedCount,
+  criticalFindingsOpen,
+}: {
+  approvalRate?: number;
+  approvedCount?: number;
+  conditionallyApprovedCount?: number;
+  rejectedCount?: number;
+  criticalFindingsOpen?: number;
+}) {
+  const hasData =
+    approvalRate !== undefined ||
+    approvedCount !== undefined ||
+    conditionallyApprovedCount !== undefined ||
+    rejectedCount !== undefined;
+
+  const rateColor =
+    approvalRate === undefined
+      ? 'bg-slate-300'
+      : approvalRate >= 70
+      ? 'bg-emerald-500'
+      : approvalRate >= 40
+      ? 'bg-amber-400'
+      : 'bg-rose-500';
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Tasa de aprobacion */}
+      <div
+        className="dash-reveal bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden"
+        style={{ animationDelay: '580ms' }}
+      >
+        <div className="px-5 pt-5 pb-3">
+          <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+            Tasa de Aprobacion
+          </h3>
+        </div>
+
+        {!hasData ? (
+          <div className="px-5 pb-6">
+            <div className="flex items-center justify-center h-[120px] rounded-lg bg-slate-50 border border-dashed border-slate-200">
+              <p className="text-xs font-medium text-slate-400">Datos proximos</p>
+            </div>
+          </div>
+        ) : (
+          <div className="px-5 pb-5 space-y-4">
+            {/* Progress bar */}
+            <div className="space-y-1.5">
+              <div className="flex items-end justify-between">
+                <span className="text-3xl font-extrabold text-slate-900 tabular-nums">
+                  {approvalRate !== undefined ? `${Math.round(approvalRate)}%` : '—'}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium pb-1">aprobadas</span>
+              </div>
+              <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${rateColor}`}
+                  style={{ width: approvalRate !== undefined ? `${Math.min(100, Math.max(0, approvalRate))}%` : '0%' }}
+                />
+              </div>
+            </div>
+
+            {/* Counters */}
+            <div className="grid grid-cols-3 gap-2">
+              <ResultCounter
+                value={approvedCount}
+                label="Aprobadas"
+                colorText="text-emerald-600"
+                colorBg="bg-emerald-50"
+                colorBorder="border-emerald-100"
+              />
+              <ResultCounter
+                value={conditionallyApprovedCount}
+                label="Condicional"
+                colorText="text-amber-600"
+                colorBg="bg-amber-50"
+                colorBorder="border-amber-100"
+              />
+              <ResultCounter
+                value={rejectedCount}
+                label="Rechazadas"
+                colorText="text-rose-600"
+                colorBg="bg-rose-50"
+                colorBorder="border-rose-100"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Hallazgos criticos */}
+      <div
+        className="dash-reveal bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden"
+        style={{ animationDelay: '620ms' }}
+      >
+        <div className="px-5 pt-5 pb-3">
+          <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+            Hallazgos Criticos
+          </h3>
+        </div>
+
+        {criticalFindingsOpen === undefined ? (
+          <div className="px-5 pb-6">
+            <div className="flex items-center justify-center h-[120px] rounded-lg bg-slate-50 border border-dashed border-slate-200">
+              <p className="text-xs font-medium text-slate-400">Datos proximos</p>
+            </div>
+          </div>
+        ) : (
+          <div className="px-5 pb-5">
+            {criticalFindingsOpen === 0 ? (
+              <div className="flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 flex-shrink-0">
+                  <ShieldAlert className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-emerald-700">Sin hallazgos criticos</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Todos los hallazgos estan cerrados</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 rounded-xl bg-rose-50 border border-rose-200 px-4 py-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-100 flex-shrink-0">
+                  <ShieldAlert className="h-5 w-5 text-rose-600" />
+                </div>
+                <div>
+                  <p className="text-3xl font-extrabold text-rose-700 tabular-nums leading-none">
+                    {criticalFindingsOpen}
+                  </p>
+                  <p className="text-xs font-semibold text-rose-600 mt-0.5">
+                    {criticalFindingsOpen === 1 ? 'hallazgo critico abierto' : 'hallazgos criticos abiertos'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ResultCounter({
+  value,
+  label,
+  colorText,
+  colorBg,
+  colorBorder,
+}: {
+  value?: number;
+  label: string;
+  colorText: string;
+  colorBg: string;
+  colorBorder: string;
+}) {
+  return (
+    <div className={`rounded-lg border ${colorBorder} ${colorBg} px-3 py-2.5 text-center`}>
+      <p className={`text-xl font-extrabold tabular-nums ${colorText}`}>
+        {value ?? '—'}
+      </p>
+      <p className={`text-[10px] font-semibold mt-0.5 ${colorText} opacity-80`}>{label}</p>
     </div>
   );
 }
