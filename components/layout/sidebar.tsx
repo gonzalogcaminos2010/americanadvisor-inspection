@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { PaginatedResponse, Inspection, Finding, FindingStatus } from '@/types';
+import { PaginatedResponse, Inspection, Finding } from '@/types';
 import { NotificationBell, NotificationItem } from '@/components/layout/notification-bell';
 import {
   LayoutDashboard,
