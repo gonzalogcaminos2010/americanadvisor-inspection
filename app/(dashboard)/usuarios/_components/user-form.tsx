@@ -3,18 +3,23 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { UserFormData } from '@/types';
+import { User, UserFormData } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 
-const userSchema = z.object({
+const createSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
   email: z.string().min(1, 'El email es requerido').email('Email no válido'),
-  role: z.enum(['supervisor', 'inspector'], {
-    required_error: 'El rol es requerido',
-  }),
+  role: z.enum(['supervisor', 'inspector'], { required_error: 'El rol es requerido' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+});
+
+const editSchema = z.object({
+  name: z.string().min(1, 'El nombre es requerido'),
+  email: z.string().min(1, 'El email es requerido').email('Email no válido'),
+  role: z.enum(['supervisor', 'inspector'], { required_error: 'El rol es requerido' }),
+  password: z.string().optional(),
 });
 
 const roleOptions = [
@@ -25,19 +30,21 @@ const roleOptions = [
 interface UserFormProps {
   onSubmit: (data: UserFormData) => void;
   isLoading: boolean;
+  initialData?: User;
 }
 
-export function UserForm({ onSubmit, isLoading }: UserFormProps) {
+export function UserForm({ onSubmit, isLoading, initialData }: UserFormProps) {
+  const isEdit = !!initialData;
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(isEdit ? editSchema : createSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      role: 'inspector',
+      name: initialData?.name ?? '',
+      email: initialData?.email ?? '',
+      role: (initialData?.role as 'supervisor' | 'inspector') ?? 'inspector',
       password: '',
     },
   });
@@ -63,16 +70,18 @@ export function UserForm({ onSubmit, isLoading }: UserFormProps) {
         error={errors.role?.message}
         {...register('role')}
       />
-      <Input
-        label="Contraseña"
-        type="password"
-        placeholder="Mínimo 8 caracteres"
-        error={errors.password?.message}
-        {...register('password')}
-      />
+      {!isEdit && (
+        <Input
+          label="Contraseña"
+          type="password"
+          placeholder="Mínimo 8 caracteres"
+          error={errors.password?.message}
+          {...register('password')}
+        />
+      )}
       <div className="flex justify-end gap-3 pt-4">
         <Button type="submit" isLoading={isLoading}>
-          Crear Usuario
+          {isEdit ? 'Guardar cambios' : 'Crear Usuario'}
         </Button>
       </div>
     </form>

@@ -18,6 +18,7 @@ export default function UsuariosPage() {
   const queryClient = useQueryClient();
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
 
   // Fetch users — endpoint returns array directly or wrapped in { data: [...] }
@@ -51,8 +52,35 @@ export default function UsuariosPage() {
     },
   });
 
-  const handleCreate = (data: UserFormData) => {
-    createMutation.mutate(data);
+  const editMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<UserFormData> }) =>
+      api.put(`/users/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Usuario actualizado exitosamente');
+      setEditingUser(null);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Error al actualizar el usuario');
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: number; is_active: boolean }) =>
+      api.put(`/users/${id}`, { is_active }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(vars.is_active ? 'Usuario activado' : 'Usuario desactivado');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Error al cambiar el estado del usuario');
+    },
+  });
+
+  const handleCreate = (data: UserFormData) => createMutation.mutate(data);
+  const handleEdit = (data: UserFormData) => {
+    if (!editingUser) return;
+    editMutation.mutate({ id: editingUser.id, data });
   };
 
   // Role badge helpers
@@ -120,12 +148,32 @@ export default function UsuariosPage() {
         key: 'actions',
         header: 'Acciones',
         render: (u: User) => (
-          <button
-            onClick={() => setResetPasswordUser(u)}
-            className="text-sm text-orange-600 hover:text-orange-800 font-medium transition-colors"
-          >
-            Resetear contraseña
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setEditingUser(u)}
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              Editar
+            </button>
+            {hasIsActive && (
+              <button
+                onClick={() => toggleActiveMutation.mutate({ id: u.id, is_active: !u.is_active })}
+                className={`text-sm font-medium transition-colors ${
+                  u.is_active
+                    ? 'text-gray-500 hover:text-red-600'
+                    : 'text-gray-500 hover:text-green-600'
+                }`}
+              >
+                {u.is_active ? 'Desactivar' : 'Activar'}
+              </button>
+            )}
+            <button
+              onClick={() => setResetPasswordUser(u)}
+              className="text-sm text-orange-600 hover:text-orange-800 font-medium transition-colors"
+            >
+              Resetear clave
+            </button>
+          </div>
         ),
       },
     ];
@@ -167,6 +215,22 @@ export default function UsuariosPage() {
           onSubmit={handleCreate}
           isLoading={createMutation.isPending}
         />
+      </Modal>
+
+      {/* Edit user modal */}
+      <Modal
+        isOpen={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        title="Editar Usuario"
+        size="md"
+      >
+        {editingUser && (
+          <UserForm
+            initialData={editingUser}
+            onSubmit={handleEdit}
+            isLoading={editMutation.isPending}
+          />
+        )}
       </Modal>
 
       {/* Reset password modal */}
