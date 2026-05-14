@@ -95,69 +95,33 @@ class ApiClient {
     });
     return response.data;
   }
+
+  async getBlob(path: string, accept = 'application/pdf'): Promise<string> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const response = await fetch(`${API_URL}${path}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Accept: accept,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Error al obtener el recurso: ${response.status} ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  }
 }
 
 export const api = new ApiClient();
 
-export async function getInspectionReportPreview(inspectionId: number): Promise<string> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-  const response = await fetch(
-    `${API_URL}/inspections/${inspectionId}/report/preview`,
-    {
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        Accept: 'application/pdf',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error('Error al generar preview del informe');
-  }
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
+export function getInspectionReportPreview(inspectionId: number): Promise<string> {
+  return api.getBlob(`/inspections/${inspectionId}/report/preview`);
 }
 
-export async function getInspectionCertificate(inspectionId: number): Promise<string> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-  const response = await fetch(
-    `${API_URL}/inspections/${inspectionId}/certificate`,
-    {
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        Accept: 'application/pdf',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error('Error al obtener el certificado');
-  }
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
+export function getInspectionCertificate(inspectionId: number): Promise<string> {
+  return api.getBlob(`/inspections/${inspectionId}/certificate`);
 }
 
-export async function getInspectionReport(inspectionId: number): Promise<string> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-  const response = await fetch(
-    `${API_URL}/inspections/${inspectionId}/report`,
-    {
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        Accept: 'application/pdf',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error('Error al obtener el informe');
-  }
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
+export function getInspectionReport(inspectionId: number): Promise<string> {
+  return api.getBlob(`/inspections/${inspectionId}/report`);
 }

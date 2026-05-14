@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { PaginatedResponse, Inspection } from '@/types';
+import { NotificationBell, NotificationItem } from '@/components/layout/notification-bell';
 import {
   LayoutDashboard,
   Users,
@@ -69,14 +70,29 @@ export function Sidebar() {
 
   const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
 
-  const { data: submittedCount } = useQuery<number>({
-    queryKey: ['inspections-submitted-count'],
-    queryFn: async () => {
-      const res = await api.get<PaginatedResponse<Inspection>>('/inspections?status=SUBMITTED&per_page=1');
-      return res.meta?.total ?? 0;
-    },
+  const { data: submittedData } = useQuery<PaginatedResponse<Inspection>>({
+    queryKey: ['inspections-submitted-bell'],
+    queryFn: () => api.get('/inspections?status=SUBMITTED&per_page=5'),
     enabled: isSupervisorOrAdmin,
     refetchInterval: 60000,
+  });
+
+  const submittedCount = submittedData?.meta?.total ?? 0;
+
+  const bellItems: NotificationItem[] = (submittedData?.data ?? []).map((insp) => {
+    const raw = insp as unknown as Record<string, unknown>;
+    const equip = raw.equipment as Record<string, unknown> | undefined;
+    return {
+      id: insp.id,
+      equipmentName:
+        (equip?.name as string) ||
+        insp.work_order?.equipment?.name ||
+        `Inspección #${insp.id}`,
+      statusLabel: 'Enviada — pendiente de revisión',
+      statusColor: 'blue',
+      href: `/dashboard/inspections/${insp.id}`,
+      date: insp.completed_at || insp.updated_at,
+    };
   });
 
   const navGroups = baseNavGroups.map((group) => ({
@@ -138,6 +154,17 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {isSupervisorOrAdmin && (
+        <div className="border-t border-gray-200 pt-2">
+          <NotificationBell
+            items={bellItems}
+            totalCount={submittedCount}
+            viewAllHref="/dashboard/revisiones"
+            viewAllLabel="Ver revisiones pendientes"
+          />
+        </div>
+      )}
 
       <div className="border-t border-gray-200 px-4 py-4">
         {user && (

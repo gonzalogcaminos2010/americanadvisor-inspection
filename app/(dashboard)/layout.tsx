@@ -1,11 +1,13 @@
 'use client';
 
-import { useAuthGuard } from '@/hooks/use-auth-guard';
+import { useAuth } from '@/lib/auth';
 import { Spinner } from '@/components/ui/spinner';
 import { AppLayout } from '@/components/layout/app-layout';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isLoading, isAuthenticated } = useAuthGuard();
+  // Middleware already redirects unauthenticated users to /login.
+  // We only show a spinner while the client-side auth state is hydrating.
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -13,10 +15,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Spinner size="lg" />
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return null;
   }
 
   return <AppLayout>{children}</AppLayout>;

@@ -33,6 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
+      // Sync cookie in case it was missing (e.g. session from before this change)
+      document.cookie = `auth-token=${storedToken}; path=/; SameSite=Strict`;
     }
     setIsLoading(false);
   }, []);
@@ -43,6 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
+    // Set cookie so middleware can read the token on the server (Edge runtime)
+    document.cookie = `auth-token=${token}; path=/; SameSite=Strict`;
     setToken(token);
     setUser(user);
     // Redirect based on role
@@ -61,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    // Clear the cookie so middleware also sees the user as logged out
+    document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
     setToken(null);
     setUser(null);
     router.push('/login');

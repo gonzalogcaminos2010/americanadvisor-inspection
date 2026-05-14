@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Inspection, PaginatedResponse } from '@/types';
+import { NotificationBell, NotificationItem } from '@/components/layout/notification-bell';
 import {
   LayoutDashboard,
   FileCheck,
@@ -28,12 +29,45 @@ export function InspectorSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const { data: returnedData } = useQuery<PaginatedResponse<Inspection>>({
-    queryKey: ['inspector-returned-count', user?.id],
-    queryFn: () => api.get('/inspections', { params: { inspector_id: user?.id, status: 'returned', per_page: 1 } }),
+    queryKey: ['inspector-returned-bell', user?.id],
+    queryFn: () => api.get('/inspections', { params: { inspector_id: user?.id, status: 'RETURNED', per_page: 5 } }),
     enabled: !!user?.id,
     refetchInterval: 60000,
   });
+
+  const { data: approvedData } = useQuery<PaginatedResponse<Inspection>>({
+    queryKey: ['inspector-approved-bell', user?.id],
+    queryFn: () => api.get('/inspections', { params: { inspector_id: user?.id, status: 'APPROVED', per_page: 5 } }),
+    enabled: !!user?.id,
+    refetchInterval: 60000,
+  });
+
   const returnedCount = returnedData?.meta?.total ?? 0;
+  const approvedCount = approvedData?.meta?.total ?? 0;
+  const bellTotalCount = returnedCount + approvedCount;
+
+  const toItem = (insp: Inspection, statusLabel: string, statusColor: NotificationItem['statusColor']): NotificationItem => {
+    const raw = insp as unknown as Record<string, unknown>;
+    const equip = raw.equipment as Record<string, unknown> | undefined;
+    return {
+      id: insp.id,
+      equipmentName:
+        (equip?.name as string) ||
+        insp.work_order?.equipment?.name ||
+        `Inspección #${insp.id}`,
+      statusLabel,
+      statusColor,
+      href: `/inspector/mis-inspecciones/${insp.id}`,
+      date: insp.approved_at || insp.updated_at,
+    };
+  };
+
+  const bellItems: NotificationItem[] = [
+    ...(returnedData?.data ?? []).map((i) => toItem(i, 'Devuelta con observaciones', 'amber')),
+    ...(approvedData?.data ?? []).map((i) => toItem(i, 'Aprobada', 'green')),
+  ]
+    .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
+    .slice(0, 5);
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -82,6 +116,15 @@ export function InspectorSidebar() {
           })}
         </div>
       </nav>
+
+      <div className="border-t border-gray-200 pt-2">
+        <NotificationBell
+          items={bellItems}
+          totalCount={bellTotalCount}
+          viewAllHref="/inspector/mis-inspecciones"
+          viewAllLabel="Ver mis inspecciones"
+        />
+      </div>
 
       <div className="border-t border-gray-200 px-4 py-4">
         {user && (
