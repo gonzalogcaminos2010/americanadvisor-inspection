@@ -44,7 +44,7 @@ const baseNavGroups: NavGroup[] = [
     label: 'GESTIÓN',
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { label: 'Usuarios', href: '/dashboard/usuarios', icon: Users, roles: ['admin'] },
+      { label: 'Usuarios', href: '/usuarios', icon: Users, roles: ['admin'] },
       { label: 'Clientes', href: '/clients', icon: Users, roles: ['admin'] },
       { label: 'Equipos', href: '/equipment', icon: Wrench, roles: ['admin'] },
     ],
@@ -54,7 +54,7 @@ const baseNavGroups: NavGroup[] = [
     items: [
       { label: 'Solicitudes', href: '/inspection-requests', icon: ClipboardList, roles: ['admin'] },
       { label: 'Órdenes de Trabajo', href: '/work-orders', icon: FileCheck },
-      { label: 'Calendario', href: '/dashboard/calendario', icon: CalendarDays },
+      { label: 'Calendario', href: '/calendario', icon: CalendarDays },
     ],
   },
   {
