@@ -11,7 +11,6 @@ import {
   InspectionPhoto,
   Finding,
   TemplateSection,
-  InspectionStatus,
   QUESTION_TYPE_LABELS,
 } from '@/types';
 import { Badge } from '@/components/ui/badge';
