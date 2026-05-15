@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isPublic = pathname === '/login' || pathname === '/';
+  const isPublic = pathname === '/login' || pathname === '/' || pathname.startsWith('/api/');
 
   if (isPublic) {
     return NextResponse.next();
