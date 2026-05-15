@@ -45,12 +45,14 @@ interface EquipmentFormProps {
   initialData?: Equipment;
   onSubmit: (data: EquipmentFormData) => void;
   isLoading?: boolean;
+  lockedClient?: { id: number; code: string; name: string };
 }
 
-export function EquipmentForm({ initialData, onSubmit, isLoading }: EquipmentFormProps) {
+export function EquipmentForm({ initialData, onSubmit, isLoading, lockedClient }: EquipmentFormProps) {
   const { data: clientsData } = useQuery<PaginatedResponse<Client>>({
     queryKey: ['clients-select'],
     queryFn: () => api.get<PaginatedResponse<Client>>('/clients?active=true&per_page=100'),
+    enabled: !lockedClient,
   });
 
   const [metadataEntries, setMetadataEntries] = useState<MetadataEntry[]>(() => {
@@ -71,7 +73,7 @@ export function EquipmentForm({ initialData, onSubmit, isLoading }: EquipmentFor
     resolver: zodResolver(equipmentSchema),
     defaultValues: initialData
       ? {
-          client_id: initialData.client_id,
+          client_id: initialData.client_id ?? lockedClient?.id,
           name: initialData.name,
           equipment_code: initialData.equipment_code,
           description: initialData.description || '',
@@ -84,6 +86,7 @@ export function EquipmentForm({ initialData, onSubmit, isLoading }: EquipmentFor
         }
       : {
           status: EquipmentStatus.ACTIVE,
+          client_id: lockedClient?.id,
         },
   });
 
@@ -93,21 +96,21 @@ export function EquipmentForm({ initialData, onSubmit, isLoading }: EquipmentFor
 
   // Auto-generate equipment_code when client changes (only on create)
   useEffect(() => {
-    if (isEditing || !selectedClientId) return;
-    const client = clients.find((c) => c.id === Number(selectedClientId));
-    if (!client) return;
+    if (isEditing) return;
+    const activeClient = lockedClient ?? clients.find((c) => c.id === Number(selectedClientId));
+    if (!activeClient) return;
 
-    api.get<{ success: boolean; data: Equipment[] }>('/equipment', { params: { client_id: client.id } })
+    api.get<{ success: boolean; data: Equipment[] }>('/equipment', { params: { client_id: activeClient.id } })
       .then((res) => {
         const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
         const nextNum = String(list.length + 1).padStart(3, '0');
-        setValue('equipment_code', `${client.code}-EQ-${nextNum}`);
+        setValue('equipment_code', `${activeClient.code}-EQ-${nextNum}`);
       })
       .catch(() => {
         const rand = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
-        setValue('equipment_code', `${client.code}-EQ-${rand}`);
+        setValue('equipment_code', `${activeClient.code}-EQ-${rand}`);
       });
-  }, [selectedClientId, clients, isEditing, setValue]);
+  }, [selectedClientId, clients, lockedClient, isEditing, setValue]);
 
   const clientOptions = clients.map((c) => ({
     value: String(c.id),
@@ -159,14 +162,26 @@ export function EquipmentForm({ initialData, onSubmit, isLoading }: EquipmentFor
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Select
-          label="Cliente"
-          options={clientOptions}
-          placeholder="Seleccione un cliente"
-          error={errors.client_id?.message}
-          defaultValue={initialData ? String(initialData.client_id) : ''}
-          {...register('client_id')}
-        />
+        {lockedClient ? (
+          <>
+            <input type="hidden" {...register('client_id')} value={lockedClient.id} />
+            <div className="sm:col-span-2 lg:col-span-3">
+              <p className="text-xs text-gray-500 mb-1">Cliente</p>
+              <p className="text-sm font-medium text-gray-900 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                {lockedClient.name}
+              </p>
+            </div>
+          </>
+        ) : (
+          <Select
+            label="Cliente"
+            options={clientOptions}
+            placeholder="Seleccione un cliente"
+            error={errors.client_id?.message}
+            defaultValue={initialData ? String(initialData.client_id) : ''}
+            {...register('client_id')}
+          />
+        )}
         <Input
           label="Nombre"
           error={errors.name?.message}

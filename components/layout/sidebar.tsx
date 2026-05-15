@@ -11,7 +11,6 @@ import { NotificationBell, NotificationItem } from '@/components/layout/notifica
 import {
   LayoutDashboard,
   Users,
-  Wrench,
   ClipboardList,
   FileCheck,
   FileText,
@@ -46,7 +45,6 @@ const baseNavGroups: NavGroup[] = [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'Usuarios', href: '/usuarios', icon: Users, roles: ['admin'] },
       { label: 'Clientes', href: '/clients', icon: Users, roles: ['admin'] },
-      { label: 'Equipos', href: '/equipment', icon: Wrench, roles: ['admin'] },
     ],
   },
   {
