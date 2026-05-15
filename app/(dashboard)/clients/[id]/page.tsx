@@ -42,16 +42,6 @@ function mapClientFromApi(data: Record<string, unknown>) {
   };
 }
 
-function mapEquipmentFromApi(data: Record<string, unknown>): Equipment {
-  return {
-    ...data,
-    equipment_code: data.internal_code || '',
-    location: (data.location as string) || '',
-    description: (data.description as string) || '',
-    status: data.status ? String(data.status).toUpperCase() : 'ACTIVE',
-    active: data.status === 'active',
-  } as unknown as Equipment;
-}
 
 export default function ClientDetailPage() {
   const params = useParams();
