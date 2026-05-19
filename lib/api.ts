@@ -125,3 +125,7 @@ export function getInspectionCertificate(inspectionId: number): Promise<string> 
 export function getInspectionReport(inspectionId: number): Promise<string> {
   return api.getBlob(`/inspections/${inspectionId}/report`);
 }
+
+export function reopenInspection(inspectionId: number) {
+  return api.post(`/inspections/${inspectionId}/reopen`);
+}

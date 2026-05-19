@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   KeyRound,
   CalendarDays,
+  FolderTree,
 } from 'lucide-react';
 import { ChangePasswordModal } from '@/components/ui/change-password-modal';
 
@@ -59,6 +60,7 @@ const baseNavGroups: NavGroup[] = [
     label: 'INSPECCIONES',
     items: [
       { label: 'Plantillas', href: '/templates', icon: FileText, roles: ['admin'] },
+      { label: 'Categorias', href: '/categories', icon: FolderTree, roles: ['admin'] },
       { label: 'Inspecciones', href: '/inspections', icon: ClipboardCheck },
       { label: 'Revisiones Pendientes', href: '/revisiones', icon: ShieldCheck, roles: ['supervisor', 'admin'] },
       { label: 'Hallazgos', href: '/findings', icon: AlertTriangle },

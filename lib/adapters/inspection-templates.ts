@@ -35,10 +35,13 @@ export function mapSectionFromApi(s: Record<string, unknown>): Record<string, un
  *  Exported so pages that fetch templates directly (outside useCrud) can reuse it. */
 export function mapTemplateFromApi<T extends Record<string, unknown>>(data: T): T {
   const sections = data.sections as Record<string, unknown>[] | undefined;
+  // Backend stores the category as `vehicle_type`; frontend code uses `category`.
+  const category = (data.category as string | undefined) ?? (data.vehicle_type as string | undefined);
+  const base = category !== undefined ? { ...data, category } : data;
   if (sections) {
-    return { ...data, sections: sections.map(mapSectionFromApi) } as T;
+    return { ...base, sections: sections.map(mapSectionFromApi) } as T;
   }
-  return data;
+  return base as T;
 }
 
 /** Map template builder payload from frontend field names back to API field names. */

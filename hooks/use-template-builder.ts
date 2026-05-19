@@ -225,11 +225,21 @@ function reducer(state: TemplateBuilderState, action: Action): TemplateBuilderSt
           s.tempId === action.sectionTempId
             ? {
                 ...s,
-                questions: s.questions.map((q) =>
-                  q.tempId === action.questionTempId
-                    ? { ...q, [action.field]: action.value }
-                    : q
-                ),
+                questions: s.questions.map((q) => {
+                  if (q.tempId !== action.questionTempId) return q;
+                  const updated = { ...q, [action.field]: action.value };
+                  // Pre-populate CUMPLE / NO CUMPLE / NO APLICA when switching to
+                  // multiple_choice if the question has no options yet.
+                  if (
+                    action.field === 'question_type' &&
+                    action.value === QuestionType.MULTIPLE_CHOICE &&
+                    q.options.length === 0
+                  ) {
+                    updated.options = ['CUMPLE', 'NO CUMPLE', 'NO APLICA'];
+                    updated.fail_values = ['NO CUMPLE'];
+                  }
+                  return updated;
+                }),
               }
             : s
         ),
@@ -321,7 +331,9 @@ export function useTemplateBuilder(templateId?: number) {
       code: state.code,
       description: state.description || null,
       version: state.version || null,
+      // Send both names: backend column is `vehicle_type`, legacy frontend uses `category`.
       category: state.category,
+      vehicle_type: state.category,
       client_id: state.client_id,
       is_active: state.is_active,
       sections: state.sections.map((s) => ({

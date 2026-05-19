@@ -493,6 +493,22 @@ export const TEMPLATE_CATEGORIES: Record<string, string> = {
   otro: 'Otro',
 };
 
+// === Template categories ===
+export interface TemplateCategory {
+  id: number;
+  code: string;
+  name: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TemplateCategoryFormData {
+  code: string;
+  name: string;
+  is_active?: boolean;
+}
+
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   [QuestionType.TEXT]: 'Texto',
   [QuestionType.NUMBER]: 'Número',

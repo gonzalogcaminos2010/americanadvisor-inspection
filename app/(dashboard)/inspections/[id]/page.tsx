@@ -1,17 +1,19 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
-import { api, getInspectionReport, getInspectionCertificate } from '@/lib/api';
+import { api, getInspectionReport, getInspectionCertificate, reopenInspection } from '@/lib/api';
 import { useToast } from '@/components/ui/toast';
 import { Inspection, ApiResponse, InspectionStatus } from '@/types';
 import { mapTemplateFromApi } from '@/hooks/use-crud';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SignatureSection } from '@/components/inspection/signature-section';
-import { ArrowLeft, FileText, AlertTriangle, MapPin, CheckCircle, ShieldCheck, Award, Download } from 'lucide-react';
+import { ArrowLeft, FileText, AlertTriangle, MapPin, CheckCircle, ShieldCheck, Award, Download, Pencil } from 'lucide-react';
 import { InspectorExecutorView } from './_components/InspectorExecutorView';
 import { SupervisorReviewView } from './_components/SupervisorReviewView';
 
@@ -37,7 +39,9 @@ export default function InspectionDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const id = params.id as string;
+  const [showReopenConfirm, setShowReopenConfirm] = useState(false);
 
   const { data: response, isLoading } = useQuery<ApiResponse<Inspection>>({
     queryKey: ['inspection', id],
@@ -55,6 +59,19 @@ export default function InspectionDetailPage() {
   });
 
   const inspection = response?.data;
+
+  const reopenMutation = useMutation({
+    mutationFn: () => reopenInspection(Number(id)),
+    onSuccess: () => {
+      toast.success('Inspeccion reabierta. Ahora podes editarla.');
+      setShowReopenConfirm(false);
+      queryClient.invalidateQueries({ queryKey: ['inspection', id] });
+      queryClient.invalidateQueries({ queryKey: ['inspections-submitted-bell'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'No se pudo reabrir la inspeccion');
+    },
+  });
 
   if (isLoading) {
     return (
@@ -86,6 +103,10 @@ export default function InspectionDetailPage() {
     status === InspectionStatus.RETURNED;
   const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
   const canReview = status === InspectionStatus.SUBMITTED && isSupervisorOrAdmin;
+  const isOwner = !!user && !!inspection.inspector_id && user.id === inspection.inspector_id;
+  const canReopen =
+    isOwner &&
+    (status === InspectionStatus.SUBMITTED || status === InspectionStatus.RETURNED);
 
   // Normalize overall_result for color logic (API may return lowercase)
   const resultUpper = (inspection.overall_result || '').toUpperCase();
@@ -311,6 +332,12 @@ export default function InspectionDetailPage() {
         <Button variant="secondary" onClick={() => router.push('/inspections')}>
           Volver
         </Button>
+        {canReopen && (
+          <Button variant="primary" onClick={() => setShowReopenConfirm(true)}>
+            <Pencil className="h-4 w-4 mr-2" />
+            Editar
+          </Button>
+        )}
         {(status === InspectionStatus.COMPLETED ||
           status === InspectionStatus.SUBMITTED ||
           status === InspectionStatus.APPROVED) && (
@@ -330,6 +357,19 @@ export default function InspectionDetailPage() {
           </Button>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={showReopenConfirm}
+        onClose={() => setShowReopenConfirm(false)}
+        onConfirm={() => reopenMutation.mutate()}
+        isLoading={reopenMutation.isPending}
+        title="Reabrir inspeccion"
+        message={
+          status === InspectionStatus.SUBMITTED
+            ? 'Esta inspeccion esta enviada al supervisor para revision. Si la editas, va a salir de la cola de revision hasta que la vuelvas a enviar. Continuar?'
+            : 'Esta inspeccion fue devuelta por el supervisor. Al reabrirla podras corregirla y reenviarla. Continuar?'
+        }
+      />
     </div>
   );
 }

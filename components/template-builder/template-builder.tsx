@@ -12,6 +12,8 @@ import { useTemplateBuilder } from '@/hooks/use-template-builder';
 import {
   InspectionTemplate,
   ApiResponse,
+  PaginatedResponse,
+  TemplateCategory,
   TEMPLATE_CATEGORIES,
 } from '@/types';
 import { mapTemplateFromApi } from '@/hooks/use-crud';
@@ -22,7 +24,8 @@ interface TemplateBuilderProps {
   onSaved?: (template: InspectionTemplate) => void;
 }
 
-const categoryOptions = Object.entries(TEMPLATE_CATEGORIES).map(
+// Fallback shown if the categories endpoint isn't reachable.
+const fallbackCategoryOptions = Object.entries(TEMPLATE_CATEGORIES).map(
   ([value, label]) => ({ value, label })
 );
 
@@ -43,6 +46,17 @@ export function TemplateBuilder({ templateId, onSaved }: TemplateBuilderProps) {
   } = useTemplateBuilder(templateId);
 
   const [showPreview, setShowPreview] = useState(false);
+
+  // Fetch active categories (admin-managed CRUD endpoint)
+  const { data: categoriesData } = useQuery<PaginatedResponse<TemplateCategory>>({
+    queryKey: ['template-categories-active'],
+    queryFn: () =>
+      api.get<PaginatedResponse<TemplateCategory>>('/template-categories?active=true&per_page=100'),
+  });
+
+  const categoryOptions = categoriesData?.data?.length
+    ? categoriesData.data.map((c) => ({ value: c.code, label: c.name }))
+    : fallbackCategoryOptions;
 
   // Fetch template for edit mode
   const { data: templateData } = useQuery<ApiResponse<InspectionTemplate>>({
