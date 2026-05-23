@@ -6,10 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:prod": "BASE_URL=https://americanadvisor-inspec-git-50720b-gonzalogcaminos2010s-projects.vercel.app playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
+    "@sentry/nextjs": "^10.53.1",
     "@tanstack/react-query": "^5.62.0",
     "@types/react-signature-canvas": "^1.0.7",
     "autoprefixer": "^10.4.24",
@@ -29,6 +33,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
