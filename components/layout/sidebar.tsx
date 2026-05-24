@@ -151,10 +151,12 @@ export function Sidebar() {
   const sidebarContent = (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-200">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white font-bold text-sm">
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-700 to-accent-500 text-white font-bold text-sm shadow-sm">
           AA
         </div>
-        <span className="text-lg font-bold text-gray-900">American Advisor</span>
+        <span className="text-lg font-bold text-gray-900">
+          American<span className="text-accent-500">Advisor</span>
+        </span>
       </div>
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
@@ -250,7 +252,9 @@ export function Sidebar() {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <span className="ml-2 text-lg font-bold text-gray-900">American Advisor</span>
+        <span className="ml-2 text-lg font-bold text-gray-900">
+          American<span className="text-accent-500">Advisor</span>
+        </span>
       </div>
 
       {/* Mobile overlay */}

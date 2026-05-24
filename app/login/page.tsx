@@ -26,13 +26,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            American Advisor
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-700 to-accent-500 px-4">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-2xl shadow-2xl">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-700 to-accent-500 text-white font-extrabold text-2xl shadow-lg mb-4">
+            AA
+          </div>
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            American<span className="text-accent-500">Advisor</span>
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600">
             Sistema de Gestión de Inspecciones
           </p>
         </div>

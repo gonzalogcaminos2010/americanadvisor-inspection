@@ -3,13 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
+  /* American Advisor brand palette */
+  --aa-navy: #1A365D;
+  --aa-navy-dark: #0A1830;
+  --aa-cyan: #00A6D6;
+  --aa-cyan-light: #4DC4EC;
+
+  --background: #FFFFFF;
+  --foreground: #0A1830;
+  --foreground-rgb: 10, 24, 48;
   --background-rgb: 255, 255, 255;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
+  color: var(--foreground);
+  background: var(--background);
 }
 
 @layer utilities {
