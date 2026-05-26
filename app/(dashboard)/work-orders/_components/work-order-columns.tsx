@@ -4,6 +4,7 @@ import { WorkOrder } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Column } from '@/components/shared/data-table';
+import { canModifyWorkOrder, workOrderPrimaryLabel } from '@/lib/transitions/work-order-transitions';
 import { Pencil, Trash2, Eye } from 'lucide-react';
 
 export function getWorkOrderColumns(
@@ -57,16 +58,12 @@ export function getWorkOrderColumns(
       key: 'actions',
       header: 'Acciones',
       render: (order: WorkOrder) => {
-        const canModify = order.status === 'PENDING' || order.status === 'IN_PROGRESS';
+        const canModify = canModifyWorkOrder(order.status);
         return (
           <div className="flex gap-2">
             <Button variant="primary" size="sm" onClick={() => onView(order)}>
               <Eye className="h-4 w-4 mr-1" />
-              {order.status === 'PENDING'
-                ? 'Iniciar'
-                : order.status === 'IN_PROGRESS'
-                  ? 'Inspeccionar'
-                  : 'Ver'}
+              {workOrderPrimaryLabel(order.status)}
             </Button>
             {canModify && (
               <>

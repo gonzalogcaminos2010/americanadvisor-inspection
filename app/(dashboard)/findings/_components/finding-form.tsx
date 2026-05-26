@@ -4,11 +4,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Finding, FindingFormData, FindingSeverity, FindingStatus } from '@/types';
+import { useAuth } from '@/lib/auth';
+import { findingActions, findingRequiresNote, FINDING_STATUS_LABELS } from '@/lib/transitions/finding-transitions';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-
-const CLOSING_STATUSES = [FindingStatus.RESOLVED, FindingStatus.CLOSED];
 
 const findingSchema = z.object({
   title: z.string().min(1, 'El titulo es requerido'),
@@ -18,7 +18,7 @@ const findingSchema = z.object({
   corrective_action: z.string().optional(),
   due_date: z.string().optional(),
 }).superRefine((data, ctx) => {
-  if (data.status && CLOSING_STATUSES.includes(data.status) && !data.corrective_action?.trim()) {
+  if (data.status && findingRequiresNote(data.status) && !data.corrective_action?.trim()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Describí qué se corrigió para poder cerrar el hallazgo',
@@ -34,14 +34,6 @@ const severityOptions = [
   { value: FindingSeverity.CRITICAL, label: 'Critico' },
 ];
 
-const statusOptions = [
-  { value: FindingStatus.OPEN, label: 'Abierto' },
-  { value: FindingStatus.IN_REVIEW, label: 'En Revision' },
-  { value: FindingStatus.CORRECTIVE_ACTION, label: 'Accion Correctiva' },
-  { value: FindingStatus.RESOLVED, label: 'Resuelto' },
-  { value: FindingStatus.CLOSED, label: 'Cerrado' },
-];
-
 interface FindingFormProps {
   initialData?: Finding;
   onSubmit: (data: FindingFormData) => void;
@@ -55,6 +47,7 @@ function defaultDueDate(): string {
 }
 
 export function FindingForm({ initialData, onSubmit, isLoading }: FindingFormProps) {
+  const { user } = useAuth();
   const {
     register,
     handleSubmit,
@@ -79,7 +72,18 @@ export function FindingForm({ initialData, onSubmit, isLoading }: FindingFormPro
   });
 
   const currentStatus = watch('status');
-  const isClosing = currentStatus && CLOSING_STATUSES.includes(currentStatus as FindingStatus);
+  const isClosing = !!currentStatus && findingRequiresNote(currentStatus as FindingStatus);
+
+  // Opciones de Estado según el rol: el Estado actual ("dejar como está") + las
+  // transiciones permitidas. Un inspector solo ve los Estados hacia adelante.
+  const fromStatus = (initialData?.status ?? FindingStatus.OPEN) as FindingStatus;
+  const statusOptions = [
+    { value: fromStatus, label: FINDING_STATUS_LABELS[fromStatus] },
+    ...findingActions(fromStatus, user?.role ?? '').map((a) => ({
+      value: a.action,
+      label: a.label,
+    })),
+  ];
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

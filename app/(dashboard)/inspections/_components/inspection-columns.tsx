@@ -1,9 +1,10 @@
 'use client';
 
-import { Inspection, InspectionStatus } from '@/types';
+import { Inspection } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Column } from '@/components/shared/data-table';
+import { canContinueInspection } from '@/lib/transitions/inspection-transitions';
 import { Eye, Play, Award } from 'lucide-react';
 
 export function getInspectionColumns(
@@ -77,7 +78,7 @@ export function getInspectionColumns(
           <Button variant="ghost" size="sm" onClick={() => onView(item)}>
             <Eye className="h-4 w-4" />
           </Button>
-          {item.status === InspectionStatus.IN_PROGRESS && (
+          {canContinueInspection(item.status) && (
             <Button variant="primary" size="sm" onClick={() => onContinue(item)}>
               <Play className="h-4 w-4" />
             </Button>

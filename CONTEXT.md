@@ -45,3 +45,11 @@ Usuario con rol `supervisor`. Revisa Inspecciones, aprueba o devuelve, asigna Re
 ## Inspección
 
 Proceso de evaluación de un Equipo siguiendo una Plantilla de preguntas. Tiene un ciclo de vida propio: `NOT_STARTED → IN_PROGRESS → SUBMITTED → APPROVED | RETURNED`.
+
+## Transición
+
+Cambio de Estado de una entidad (Hallazgo, Inspección, Orden de Trabajo). Cada entidad tiene su propio conjunto de Transiciones permitidas según el Estado actual y el rol del usuario.
+
+## Acción Disponible
+
+Una Transición que un usuario concreto puede ejecutar ahora mismo, dado el Estado actual, su rol y —cuando aplica— si es el dueño de la entidad. Es lo que decide qué botones/opciones muestra la UI. Las reglas viven en un único módulo por entidad (`lib/transitions/*`), no dispersas en las pantallas. Una Acción puede requerir una nota obligatoria (ej. resolver/cerrar un Hallazgo). La fuente de verdad última es el backend; el módulo del frontend refleja la regla para gobernar la UI.

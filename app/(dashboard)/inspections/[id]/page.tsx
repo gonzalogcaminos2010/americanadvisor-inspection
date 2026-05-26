@@ -16,6 +16,7 @@ import { SignatureSection } from '@/components/inspection/signature-section';
 import { ArrowLeft, FileText, AlertTriangle, MapPin, CheckCircle, ShieldCheck, Award, Download, Pencil } from 'lucide-react';
 import { InspectorExecutorView } from './_components/InspectorExecutorView';
 import { SupervisorReviewView } from './_components/SupervisorReviewView';
+import { inspectionAbilities } from '@/lib/transitions/inspection-transitions';
 
 const RESULT_LABELS: Record<string, string> = {
   PASS: 'Aprobado',
@@ -94,19 +95,8 @@ export default function InspectionDetailPage() {
 
   // Normalize status to uppercase to match enum (API may return lowercase)
   const status = (inspection.status?.toUpperCase() || '') as InspectionStatus;
-  const isActive =
-    status === InspectionStatus.NOT_STARTED || status === InspectionStatus.IN_PROGRESS;
-  const isReadOnly =
-    status === InspectionStatus.COMPLETED ||
-    status === InspectionStatus.SUBMITTED ||
-    status === InspectionStatus.APPROVED ||
-    status === InspectionStatus.RETURNED;
-  const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
-  const canReview = status === InspectionStatus.SUBMITTED && isSupervisorOrAdmin;
-  const isOwner = !!user && !!inspection.inspector_id && user.id === inspection.inspector_id;
-  const canReopen =
-    isOwner &&
-    (status === InspectionStatus.SUBMITTED || status === InspectionStatus.RETURNED);
+  // Reglas de la Inspección centralizadas (ver lib/transitions + CONTEXT.md).
+  const { isActive, isReadOnly, canReview, canReopen } = inspectionAbilities(inspection, user);
 
   // Normalize overall_result for color logic (API may return lowercase)
   const resultUpper = (inspection.overall_result || '').toUpperCase();
