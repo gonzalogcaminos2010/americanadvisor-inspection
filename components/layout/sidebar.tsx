@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { correctionDeadline } from '@/lib/correction-deadline';
 import { PaginatedResponse, Inspection, Finding } from '@/types';
 import { NotificationBell, NotificationItem } from '@/components/layout/notification-bell';
 import {
@@ -85,9 +86,6 @@ export function Sidebar() {
 
   const submittedCount = submittedData?.meta?.total ?? 0;
 
-  const sevenDaysFromNow = new Date();
-  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-
   const { data: findingsData } = useQuery<PaginatedResponse<Finding>>({
     queryKey: ['findings-expiring-bell'],
     queryFn: () => api.get('/findings?per_page=50&status=OPEN,IN_REVIEW,CORRECTIVE_ACTION'),
@@ -95,11 +93,9 @@ export function Sidebar() {
     refetchInterval: 60000,
   });
 
-  const expiringFindings = (findingsData?.data ?? []).filter((f) => {
-    if (!f.due_date) return false;
-    const due = new Date(f.due_date);
-    return due <= sevenDaysFromNow;
-  }).slice(0, 5);
+  const expiringFindings = (findingsData?.data ?? [])
+    .filter((f) => correctionDeadline(f).isExpiringSoon)
+    .slice(0, 5);
 
   const expiringCount = expiringFindings.length;
 
@@ -120,12 +116,11 @@ export function Sidebar() {
       };
     }),
     ...expiringFindings.map((f) => {
-      const days = Math.ceil((new Date(f.due_date!).getTime() - Date.now()) / 86400000);
-      const isOverdue = days < 0;
+      const { daysLeft, isOverdue } = correctionDeadline(f);
       return {
         id: f.id + 100000,
         equipmentName: f.title || `Hallazgo #${f.id}`,
-        statusLabel: isOverdue ? 'Hallazgo vencido' : `Hallazgo vence en ${days}d`,
+        statusLabel: isOverdue ? 'Hallazgo vencido' : `Hallazgo vence en ${daysLeft}d`,
         statusColor: isOverdue ? 'amber' as const : 'amber' as const,
         href: `/dashboard/findings`,
         date: f.due_date,

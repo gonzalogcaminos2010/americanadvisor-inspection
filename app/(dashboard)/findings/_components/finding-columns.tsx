@@ -1,32 +1,25 @@
 'use client';
 
-import { Finding, FindingStatus } from '@/types';
+import { Finding } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Column } from '@/components/shared/data-table';
+import { correctionDeadline } from '@/lib/correction-deadline';
 import { Pencil, ExternalLink } from 'lucide-react';
 
+const BADGE_BASE = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold';
+
 function DeadlineBadge({ finding }: { finding: Finding }) {
-  const closed = finding.status === FindingStatus.RESOLVED || finding.status === FindingStatus.CLOSED;
-  if (closed || !finding.due_date) return <span className="text-gray-400 text-xs">—</span>;
+  const { status, daysLeft } = correctionDeadline(finding);
 
-  const days = Math.ceil((new Date(finding.due_date).getTime() - Date.now()) / 86400000);
-
-  if (days < 0) return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">
-      Vencido
-    </span>
-  );
-  if (days <= 7) return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">
-      {days}d restantes
-    </span>
-  );
-  return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">
-      {days}d restantes
-    </span>
-  );
+  if (status === 'closed' || status === 'none') {
+    return <span className="text-gray-400 text-xs">—</span>;
+  }
+  if (status === 'overdue') {
+    return <span className={`${BADGE_BASE} bg-red-100 text-red-700`}>Vencido</span>;
+  }
+  const color = status === 'urgent' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700';
+  return <span className={`${BADGE_BASE} ${color}`}>{daysLeft}d restantes</span>;
 }
 
 export function getFindingColumns(
