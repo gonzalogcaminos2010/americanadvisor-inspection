@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:prod": "BASE_URL=https://americanadvisor-inspec-git-50720b-gonzalogcaminos2010s-projects.vercel.app playwright test"
@@ -39,6 +41,7 @@
     "@types/react-dom": "^19",
     "eslint": "^8",
     "eslint-config-next": "^15.1.11",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   }
 }
