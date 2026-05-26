@@ -6,7 +6,6 @@ import { api } from '@/lib/api';
 import {
   Inspection,
   InspectionAnswer,
-  TemplateSection,
   AnswerSubmission,
   ApiResponse,
   InspectionPhoto,
@@ -14,17 +13,10 @@ import {
   FindingFormData,
 } from '@/types';
 import { mapTemplateFromApi } from '@/hooks/use-crud';
+import { computeInspectionProgress } from '@/lib/inspection-progress';
 
-// === Progress tracking ===
-export interface SectionProgress {
-  sectionId: number;
-  title: string;
-  total: number;
-  answered: number;
-  required: number;
-  requiredAnswered: number;
-  hasFails: boolean;
-}
+// Re-export para los callers que importan el tipo desde este hook.
+export type { SectionProgress } from '@/lib/inspection-progress';
 
 // === Hook ===
 export function useInspection(inspectionId: number | null) {
@@ -83,41 +75,9 @@ export function useInspection(inspectionId: number | null) {
     }
   }, [inspection?.answers, answers.size]);
 
-  // Calculate progress per section
-  const sectionProgress: SectionProgress[] = sections.map((section: TemplateSection) => {
-    const questions = section.questions?.sort((a, b) => a.sort_order - b.sort_order) || [];
-    const requiredQuestions = questions.filter((q) => q.is_required);
-    let answered = 0;
-    let requiredAnswered = 0;
-    let hasFails = false;
-
-    questions.forEach((q) => {
-      const answer = answers.get(q.id);
-      if (answer && (answer.answer_value || answer.answer_number !== undefined || answer.answer_boolean !== undefined)) {
-        answered++;
-        if (q.is_required) requiredAnswered++;
-        if (answer.is_flagged) hasFails = true;
-      }
-    });
-
-    return {
-      sectionId: section.id,
-      title: section.title,
-      total: questions.length,
-      answered,
-      required: requiredQuestions.length,
-      requiredAnswered,
-      hasFails,
-    };
-  });
-
-  const totalQuestions = sectionProgress.reduce((sum, s) => sum + s.total, 0);
-  const totalAnswered = sectionProgress.reduce((sum, s) => sum + s.answered, 0);
-  const progressPercent = totalQuestions > 0 ? Math.round((totalAnswered / totalQuestions) * 100) : 0;
-
-  const allRequiredAnswered = sectionProgress.every(
-    (s) => s.requiredAnswered >= s.required
-  );
+  // Progreso/score: lógica pura en lib/inspection-progress (testeable aparte).
+  const { sectionProgress, totalQuestions, totalAnswered, progressPercent, allRequiredAnswered } =
+    computeInspectionProgress(sections, answers);
 
   // Keep ref in sync with state so debounced saves always read latest answers
   useEffect(() => {
