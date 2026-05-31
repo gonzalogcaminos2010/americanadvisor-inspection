@@ -499,6 +499,10 @@ export interface TemplateCategory {
   code: string;
   name: string;
   is_active: boolean;
+  default_template_id?: number | null;
+  default_inspection_interval_months?: number | null;
+  default_template?: { id: number; name: string; code: string } | null;
+  equipment_fields?: CategoryEquipmentField[];
   created_at?: string;
   updated_at?: string;
 }
@@ -507,6 +511,37 @@ export interface TemplateCategoryFormData {
   code: string;
   name: string;
   is_active?: boolean;
+  default_template_id?: number | null;
+  default_inspection_interval_months?: number | null;
+}
+
+// === Category equipment fields (per-category identification schema) ===
+export type CategoryEquipmentFieldType = 'text' | 'number' | 'date' | 'select' | 'boolean';
+
+export interface CategoryEquipmentField {
+  id: number;
+  template_category_id: number;
+  key_name: string;
+  label: string;
+  type: CategoryEquipmentFieldType;
+  options?: string[] | null;
+  unit?: string | null;
+  is_required: boolean;
+  is_mutable: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CategoryEquipmentFieldFormData {
+  key_name: string;
+  label: string;
+  type: CategoryEquipmentFieldType;
+  options?: string[] | null;
+  unit?: string | null;
+  is_required: boolean;
+  is_mutable: boolean;
+  sort_order: number;
 }
 
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {

@@ -68,9 +68,17 @@ export default function CategoriesPage() {
 
   const handleSubmit = (data: TemplateCategoryFormData) => {
     if (editingCategory) {
-      // code is immutable on the backend: only send name + is_active
+      // code is immutable on the backend: send only mutable fields.
       updateMutation.mutate(
-        { id: editingCategory.id, data: { name: data.name, is_active: data.is_active } },
+        {
+          id: editingCategory.id,
+          data: {
+            name: data.name,
+            is_active: data.is_active,
+            default_template_id: data.default_template_id ?? null,
+            default_inspection_interval_months: data.default_inspection_interval_months ?? null,
+          },
+        },
         {
           onSuccess: () => {
             toast.success('Categoria actualizada');
