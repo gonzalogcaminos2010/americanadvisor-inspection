@@ -189,7 +189,9 @@ export enum WorkOrderItemStatus {
 export interface WorkOrderItem {
   id: number;
   work_order_id: number;
-  equipment_id: number;
+  equipment_id: number | null;
+  category_id?: number | null;
+  is_equipment_placeholder?: boolean;
   template_id: number | null;
   inspector_id: number | null;
   status: WorkOrderItemStatus;
@@ -410,7 +412,11 @@ export interface InspectionRequestFormData {
 }
 
 export interface WorkOrderItemFormData {
-  equipment_id: number;
+  // Either a concrete equipment (known) OR just a category (to be identified
+  // in the field by the inspector). The backend creates a placeholder when
+  // only category_id is sent.
+  equipment_id?: number;
+  category_id?: number;
   template_id?: number;
   inspector_id?: number;
   notes?: string;

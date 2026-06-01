@@ -10,6 +10,7 @@ import {
   WorkOrderFormData,
   InspectionRequest,
   InspectionTemplate,
+  TemplateCategory,
   Equipment,
   User,
   PaginatedResponse,
@@ -21,18 +22,20 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 
+const optionalId = z.coerce
+  .number()
+  .optional()
+  .or(z.literal(''))
+  .transform((val) => (val === '' || val === 0 ? undefined : val));
+
 const itemSchema = z.object({
-  equipment_id: z.coerce.number().min(1, 'Equipo requerido'),
-  template_id: z.coerce
-    .number()
-    .optional()
-    .or(z.literal(''))
-    .transform((val) => (val === '' || val === 0 ? undefined : val)),
-  inspector_id: z.coerce
-    .number()
-    .optional()
-    .or(z.literal(''))
-    .transform((val) => (val === '' || val === 0 ? undefined : val)),
+  // 'equipment' = el admin sabe qué equipo es; 'category' = a determinar en
+  // campo (el backend crea un placeholder y el inspector lo identifica).
+  mode: z.enum(['equipment', 'category']),
+  equipment_id: optionalId,
+  category_id: optionalId,
+  template_id: optionalId,
+  inspector_id: optionalId,
   notes: z.string().optional(),
 });
 
@@ -41,16 +44,8 @@ const workOrderSchema = z.object({
   priority: z.string().min(1, 'La prioridad es requerida'),
   scheduled_date: z.string().min(1, 'La fecha programada es requerida'),
   notes: z.string().optional(),
-  default_inspector_id: z.coerce
-    .number()
-    .optional()
-    .or(z.literal(''))
-    .transform((val) => (val === '' || val === 0 ? undefined : val)),
-  default_template_id: z.coerce
-    .number()
-    .optional()
-    .or(z.literal(''))
-    .transform((val) => (val === '' || val === 0 ? undefined : val)),
+  default_inspector_id: optionalId,
+  default_template_id: optionalId,
   items: z.array(itemSchema).min(1, 'Agregue al menos un equipo'),
 });
 
@@ -84,10 +79,12 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
     handleSubmit,
     control,
     watch,
+    setValue,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(workOrderSchema),
-    defaultValues: initialData
+    defaultValues: (initialData
       ? {
           inspection_request_id: initialData.inspection_request_id,
           priority: initialData.priority,
@@ -97,13 +94,17 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
           default_template_id: initialData.template_id ?? undefined,
           items: initialData.items && initialData.items.length > 0
             ? initialData.items.map((item) => ({
+                mode: (item.equipment_id ? 'equipment' : 'category') as 'equipment' | 'category',
                 equipment_id: item.equipment_id,
+                category_id: item.category_id ?? undefined,
                 template_id: item.template_id ?? undefined,
                 inspector_id: item.inspector_id ?? undefined,
                 notes: item.notes ?? '',
               }))
             : [{
+                mode: 'equipment' as const,
                 equipment_id: initialData.equipment_id,
+                category_id: undefined,
                 template_id: initialData.template_id ?? undefined,
                 inspector_id: initialData.inspector_id ?? undefined,
                 notes: '',
@@ -115,8 +116,8 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
           scheduled_date: preselectedRequest?.due_date?.split('T')[0] || new Date().toISOString().split('T')[0],
           default_inspector_id: '' as unknown as number,
           default_template_id: '' as unknown as number,
-          items: [{ equipment_id: '' as unknown as number, template_id: undefined, inspector_id: undefined, notes: '' }],
-        },
+          items: [{ mode: 'equipment' as const, equipment_id: '' as unknown as number, category_id: undefined, template_id: undefined, inspector_id: undefined, notes: '' }],
+        }) as FormValues,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -143,6 +144,12 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
       api.get<PaginatedResponse<InspectionTemplate>>('/inspection-templates?is_active=true&per_page=100'),
   });
 
+  const { data: categoriesResponse } = useQuery({
+    queryKey: ['template-categories-active'],
+    queryFn: () =>
+      api.get<PaginatedResponse<TemplateCategory>>('/template-categories?per_page=100'),
+  });
+
   const inspectionRequests = requestsResponse?.data ?? [];
   const users = Array.isArray(usersResponse)
     ? usersResponse
@@ -150,6 +157,7 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
       ? usersResponse.data
       : [];
   const templates = templatesResponse?.data ?? [];
+  const categories = (categoriesResponse?.data ?? []).filter((c) => c.is_active);
 
   // Load equipment when request changes
   useEffect(() => {
@@ -255,13 +263,37 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
     label: `${t.name} (${t.category})`,
   }));
 
+  const categoryOptions = categories.map((c) => ({
+    value: String(c.id),
+    label: c.name,
+  }));
+
   const handleAddItem = useCallback(() => {
-    append({ equipment_id: 0, template_id: undefined, inspector_id: undefined, notes: '' });
+    append({ mode: 'equipment', equipment_id: 0, category_id: undefined, template_id: undefined, inspector_id: undefined, notes: '' });
   }, [append]);
 
+  // Watch each item's mode so the equipment/category selector switches live.
+  const watchedItems = watch('items');
+
   const handleFormSubmit = (values: FormValues) => {
+    // Cross-field validation: each item needs an equipment (known) or a category.
+    let hasError = false;
+    values.items.forEach((item, i) => {
+      if (item.mode === 'equipment' && !item.equipment_id) {
+        setError(`items.${i}.equipment_id`, { message: 'Seleccione un equipo' });
+        hasError = true;
+      }
+      if (item.mode === 'category' && !item.category_id) {
+        setError(`items.${i}.category_id`, { message: 'Seleccione una categoría' });
+        hasError = true;
+      }
+    });
+    if (hasError) return;
+
     const resolvedItems = values.items.map((item) => ({
-      equipment_id: item.equipment_id,
+      // Send equipment_id when known, category_id when "to be determined".
+      equipment_id: item.mode === 'equipment' ? item.equipment_id : undefined,
+      category_id: item.mode === 'category' ? item.category_id : undefined,
       template_id: item.template_id ?? values.default_template_id,
       inspector_id: item.inspector_id ?? values.default_inspector_id,
       notes: item.notes,
@@ -272,7 +304,7 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
       scheduled_date: values.scheduled_date,
       priority: values.priority,
       notes: values.notes,
-      // Backend requires these at root level
+      // Legacy root-level fields (only when the first item is a concrete equipment)
       equipment_id: firstItem?.equipment_id,
       inspector_id: firstItem?.inspector_id ?? values.default_inspector_id,
       template_id: firstItem?.template_id ?? values.default_template_id,
@@ -376,27 +408,76 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
                 <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold flex items-center justify-center mt-5">
                   {index + 1}
                 </span>
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Select
-                    label="Equipo *"
-                    error={errors.items?.[index]?.equipment_id?.message}
-                    placeholder={loadingEquipment ? 'Cargando...' : 'Seleccionar equipo'}
-                    disabled={loadingEquipment}
-                    options={equipmentOptions}
-                    {...register(`items.${index}.equipment_id`)}
-                  />
-                  <Select
-                    label="Inspector"
-                    placeholder="Usar por defecto"
-                    options={userOptions}
-                    {...register(`items.${index}.inspector_id`)}
-                  />
-                  <Select
-                    label="Plantilla"
-                    placeholder="Usar por defecto"
-                    options={templateOptions}
-                    {...register(`items.${index}.template_id`)}
-                  />
+                <div className="flex-1 space-y-3">
+                  {/* Mode toggle: known equipment vs to-be-determined category */}
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      ¿Se conoce el equipo?
+                    </label>
+                    <div className="inline-flex rounded-md border border-gray-300 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setValue(`items.${index}.mode`, 'equipment', { shouldValidate: true })}
+                        className={`px-3 py-1.5 text-sm font-medium ${
+                          watchedItems?.[index]?.mode === 'equipment'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        Equipo conocido
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setValue(`items.${index}.mode`, 'category', { shouldValidate: true })}
+                        className={`px-3 py-1.5 text-sm font-medium border-l border-gray-300 ${
+                          watchedItems?.[index]?.mode === 'category'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        A determinar (categoría)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {watchedItems?.[index]?.mode === 'category' ? (
+                      <Select
+                        label="Categoría *"
+                        error={errors.items?.[index]?.category_id?.message}
+                        placeholder="Seleccionar categoría"
+                        options={categoryOptions}
+                        {...register(`items.${index}.category_id`)}
+                      />
+                    ) : (
+                      <Select
+                        label="Equipo *"
+                        error={errors.items?.[index]?.equipment_id?.message}
+                        placeholder={loadingEquipment ? 'Cargando...' : 'Seleccionar equipo'}
+                        disabled={loadingEquipment}
+                        options={equipmentOptions}
+                        {...register(`items.${index}.equipment_id`)}
+                      />
+                    )}
+                    <Select
+                      label="Inspector"
+                      placeholder="Usar por defecto"
+                      options={userOptions}
+                      {...register(`items.${index}.inspector_id`)}
+                    />
+                    <Select
+                      label="Plantilla"
+                      placeholder="Usar por defecto"
+                      options={templateOptions}
+                      {...register(`items.${index}.template_id`)}
+                    />
+                  </div>
+
+                  {watchedItems?.[index]?.mode === 'category' && (
+                    <p className="text-xs text-gray-500">
+                      El inspector identificará el equipo (marca, modelo, dominio…) al hacer la inspección en campo.
+                    </p>
+                  )}
                 </div>
                 {fields.length > 1 && (
                   <button
