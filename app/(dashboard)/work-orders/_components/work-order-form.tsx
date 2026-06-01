@@ -283,9 +283,24 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
         setError(`items.${i}.equipment_id`, { message: 'Seleccione un equipo' });
         hasError = true;
       }
-      if (item.mode === 'category' && !item.category_id) {
-        setError(`items.${i}.category_id`, { message: 'Seleccione una categoría' });
-        hasError = true;
+      if (item.mode === 'category') {
+        if (!item.category_id) {
+          setError(`items.${i}.category_id`, { message: 'Seleccione una categoría' });
+          hasError = true;
+        } else {
+          // Category-only item has no equipment template, so the inspection
+          // resolves its template from item -> default -> category default.
+          // If none exists it can't start, so require one here.
+          const cat = categories.find((c) => c.id === item.category_id);
+          const resolvedTemplate =
+            item.template_id ?? values.default_template_id ?? cat?.default_template_id ?? null;
+          if (!resolvedTemplate) {
+            setError(`items.${i}.template_id`, {
+              message: 'Elegí plantilla (esta categoría no tiene una por defecto)',
+            });
+            hasError = true;
+          }
+        }
       }
     });
     if (hasError) return;
@@ -466,8 +481,9 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
                       {...register(`items.${index}.inspector_id`)}
                     />
                     <Select
-                      label="Plantilla"
+                      label={watchedItems?.[index]?.mode === 'category' ? 'Plantilla *' : 'Plantilla'}
                       placeholder="Usar por defecto"
+                      error={errors.items?.[index]?.template_id?.message}
                       options={templateOptions}
                       {...register(`items.${index}.template_id`)}
                     />
