@@ -263,10 +263,13 @@ export function WorkOrderForm({ initialData, onSubmit, isLoading, preselectedReq
     label: `${t.name} (${t.category})`,
   }));
 
-  const categoryOptions = categories.map((c) => ({
-    value: String(c.id),
-    label: c.name,
-  }));
+  // Catch-all categories aren't meaningful for a "to be determined" order.
+  const categoryOptions = categories
+    .filter((c) => !['sin_clasificar', 'otro'].includes(c.code))
+    .map((c) => ({
+      value: String(c.id),
+      label: c.name,
+    }));
 
   const handleAddItem = useCallback(() => {
     append({ mode: 'equipment', equipment_id: 0, category_id: undefined, template_id: undefined, inspector_id: undefined, notes: '' });
